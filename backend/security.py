@@ -38,6 +38,12 @@ def mask_phone(phone):
     return f'+{phone[0]} ••• ••• {phone[-4:-2]} {phone[-2:]}'
 
 
+def short_name(full_name):
+    """Иванова Мария Петровна → Иванова М. П."""
+    surname, *rest = full_name.split()
+    return ' '.join([surname, *(part[0] + '.' for part in rest)])
+
+
 def password_problem(password, forbidden=()):
     """Текст ошибки, если пароль не подходит; forbidden — фрагменты, которых в пароле быть не должно."""
     if len(password) < 8:

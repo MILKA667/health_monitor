@@ -101,3 +101,87 @@ CREATE TABLE IF NOT EXISTS sms_outbox (
     text        TEXT NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Лучший результат ПСВ пациента: пороги ПСВ задаются в процентах от него
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS pef_best INTEGER;
+
+CREATE TABLE IF NOT EXISTS devices (
+    id          SERIAL PRIMARY KEY,
+    patient_id  INTEGER NOT NULL REFERENCES patients (user_id),
+    kind        TEXT NOT NULL CHECK (kind IN ('glucometer', 'tonometer', 'peakflow')),
+    model       TEXT NOT NULL,
+    connected   BOOLEAN NOT NULL DEFAULT TRUE,
+    last_sync   TIMESTAMPTZ
+);
+
+-- Измерения не удаляются и не меняются: см. триггер ниже.
+-- Давление — value (верхнее) и value2 (нижнее), остальные — только value.
+CREATE TABLE IF NOT EXISTS measurements (
+    id           SERIAL PRIMARY KEY,
+    patient_id   INTEGER NOT NULL REFERENCES patients (user_id),
+    kind         TEXT NOT NULL CHECK (kind IN ('glucose', 'bp', 'pef')),
+    value        NUMERIC(6, 1) NOT NULL,
+    value2       NUMERIC(6, 1),
+    source       TEXT NOT NULL CHECK (source IN ('device', 'manual')),
+    device_id    INTEGER REFERENCES devices (id),
+    context      TEXT,
+    wellbeing    TEXT[] NOT NULL DEFAULT '{}',
+    measured_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK ((kind = 'bp') = (value2 IS NOT NULL))
+);
+CREATE INDEX IF NOT EXISTS measurements_patient_time ON measurements (patient_id, measured_at DESC);
+
+CREATE OR REPLACE FUNCTION forbid_measurement_change() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'Измерения нельзя изменять или удалять' USING ERRCODE = 'insufficient_privilege';
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS measurements_immutable ON measurements;
+CREATE TRIGGER measurements_immutable BEFORE UPDATE OR DELETE ON measurements
+    FOR EACH ROW EXECUTE FUNCTION forbid_measurement_change();
+
+-- Пороги: на конкретного пациента или шаблоном на нозологию. Пустое значение — порог не используется.
+-- Для ПСВ значения — проценты от лучшего результата пациента.
+CREATE TABLE IF NOT EXISTS thresholds (
+    id          SERIAL PRIMARY KEY,
+    patient_id  INTEGER REFERENCES patients (user_id),
+    nosology    TEXT CHECK (nosology IN ('diabetes', 'hypertension', 'asthma')),
+    metric      TEXT NOT NULL CHECK (metric IN ('glucose', 'bp_sys', 'bp_dia', 'pef')),
+    crit_low    NUMERIC(6, 1),
+    warn_low    NUMERIC(6, 1),
+    warn_high   NUMERIC(6, 1),
+    crit_high   NUMERIC(6, 1),
+    CHECK ((patient_id IS NULL) <> (nosology IS NULL))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS thresholds_patient_metric ON thresholds (patient_id, metric) WHERE patient_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS thresholds_nosology_metric ON thresholds (nosology, metric) WHERE nosology IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS alert_settings (
+    id                  SERIAL PRIMARY KEY,
+    patient_id          INTEGER UNIQUE REFERENCES patients (user_id),
+    nosology            TEXT UNIQUE CHECK (nosology IN ('diabetes', 'hypertension', 'asthma')),
+    escalation_minutes  INTEGER NOT NULL DEFAULT 15 CHECK (escalation_minutes IN (10, 15, 20)),
+    sms_relative        BOOLEAN NOT NULL DEFAULT TRUE,
+    no_data_alert       BOOLEAN NOT NULL DEFAULT TRUE,
+    CHECK ((patient_id IS NULL) <> (nosology IS NULL))
+);
+
+-- Алерт открыт, пока не принят. Критичный без реакции до escalate_at считается эскалированным дежурному.
+CREATE TABLE IF NOT EXISTS alerts (
+    id                  SERIAL PRIMARY KEY,
+    patient_id          INTEGER NOT NULL REFERENCES patients (user_id),
+    measurement_id      INTEGER REFERENCES measurements (id),
+    level               TEXT NOT NULL CHECK (level IN ('crit', 'warn', 'nodata')),
+    rule                TEXT NOT NULL,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    escalate_at         TIMESTAMPTZ,
+    relative_sms_at     TIMESTAMPTZ,
+    accepted_at         TIMESTAMPTZ,
+    accepted_by         INTEGER REFERENCES users (id),
+    comment             TEXT
+);
+CREATE INDEX IF NOT EXISTS alerts_patient_time ON alerts (patient_id, created_at DESC);
+
+-- Дежурный врач получает критичные алерты, на которые не отреагировали вовремя
+ALTER TABLE doctors ADD COLUMN IF NOT EXISTS on_duty BOOLEAN NOT NULL DEFAULT FALSE;

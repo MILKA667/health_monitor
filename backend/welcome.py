@@ -4,16 +4,11 @@ from flask import Blueprint, jsonify, request
 
 from auth import set_password
 from db import audit, db_cursor
-from security import current_user, error, login_required, mask_phone, normalize_phone, password_problem, start_session
+from security import (current_user, error, login_required, mask_phone, normalize_phone, password_problem,
+                      short_name, start_session)
 from sms import send_sms
 
 bp = Blueprint('welcome', __name__, url_prefix='/api/welcome')
-
-
-def short_name(full_name):
-    """Иванова Мария Петровна → Иванова М. П."""
-    surname, *rest = full_name.split()
-    return ' '.join([surname, *(part[0] + '.' for part in rest)])
 
 
 def load_profile(cur, user_id):

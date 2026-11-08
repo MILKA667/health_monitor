@@ -9,6 +9,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 
 import auth
+import doctor
 import seed
 import welcome
 from db import get_db_connection
@@ -29,6 +30,7 @@ app.config.update(
 CORS(app, supports_credentials=True, origins=os.environ.get('FRONTEND_ORIGIN', 'http://localhost:5173'))
 app.register_blueprint(auth.bp)
 app.register_blueprint(welcome.bp)
+app.register_blueprint(doctor.bp)
 app.cli.add_command(seed.seed_demo)
 
 
