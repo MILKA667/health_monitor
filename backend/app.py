@@ -7,12 +7,13 @@ import click
 from dotenv import load_dotenv
 from flask import Flask, jsonify
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 import auth
 import doctor
 import seed
 import welcome
-from db import get_db_connection
+from db import apply_schema, get_db_connection
 
 # Настройки БД и SECRET_KEY — в backend/.env (образец: .env.example)
 load_dotenv(Path(__file__).parent / '.env')
@@ -27,6 +28,9 @@ app.config.update(
     SESSION_COOKIE_SECURE=os.environ.get('SESSION_COOKIE_SECURE') == '1',
     PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
 )
+# За nginx (docker compose) берём IP клиента из X-Forwarded-For — иначе лимит входов общий на всех
+if os.environ.get('BEHIND_PROXY') == '1':
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 CORS(app, supports_credentials=True, origins=os.environ.get('FRONTEND_ORIGIN', 'http://localhost:5173'))
 app.register_blueprint(auth.bp)
 app.register_blueprint(welcome.bp)
@@ -50,10 +54,7 @@ def health_check():
 @app.cli.command('init-db')
 def init_db():
     """Создаёт таблицы из schema.sql."""
-    conn = get_db_connection()
-    with conn, conn.cursor() as cur:
-        cur.execute((Path(__file__).parent / 'schema.sql').read_text(encoding='utf-8'))
-    conn.close()
+    apply_schema()
     click.echo('Таблицы созданы.')
 
 
