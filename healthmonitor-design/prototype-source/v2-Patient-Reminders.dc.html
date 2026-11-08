@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Пациент — напоминания</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#1D5FA8}
+:focus-visible{outline:2px solid #1D5FA8;outline-offset:2px}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.back{display:flex;align-items:center;gap:4px;height:44px;color:#1D5FA8;text-decoration:none;font-size:17px}
+.it{display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid #ECEEF1;cursor:pointer}
+.it input{width:22px;height:22px;margin:0;accent-color:#1D5FA8;flex-shrink:0}
+.f{height:48px;box-sizing:border-box;padding:0 12px;border:1px solid #B9C0C8;border-radius:4px;background:#FFFFFF;font:inherit;font-size:17px;color:#1B1F24;width:100%}
+.pbtn{display:flex;align-items:center;justify-content:center;width:100%;height:48px;border:none;border-radius:4px;background:#1D5FA8;color:#FFFFFF;font:inherit;font-size:17px;font-weight:600;cursor:pointer}
+.pbtn:hover{background:#164C87}
+.sbtn{display:flex;align-items:center;justify-content:center;width:100%;height:48px;border:1px solid #B9C0C8;border-radius:4px;background:#FFFFFF;color:#1B1F24;font:inherit;font-size:17px;font-weight:500;cursor:pointer}
+.sbtn:hover{background:#F0F2F4}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #1B1F24; font-size: 17px; line-height: 24px; overflow: hidden">
+
+<div style="padding: 44px 16px 0"><a class="back" href="v2-Patient-Home.dc.html"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5L7 10l5.5 5.5"></path></svg>Назад</a></div>
+
+<div style="flex-grow: 1; overflow-y: auto; padding: 4px 16px 24px; display: flex; flex-direction: column; gap: 24px">
+<h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">Напоминания</h1>
+
+<section aria-labelledby="h-med">
+<h2 id="h-med" style="margin: 0; font-size: 17px; line-height: 24px; font-weight: 600">Лекарства</h2>
+<p style="margin: 0 0 4px; font-size: 15px; line-height: 20px; color: #4A535D">Схему назначает врач. Здесь можно только выключить напоминание.</p>
+<sc-for list="{{meds}}" as="r" hint-placeholder-count="3">
+<label class="it"><span style="flex-grow: 1; display: flex; flex-direction: column; line-height: 20px"><span>{{r.title}}</span><span style="font-size: 15px; color: #4A535D">{{r.sub}}</span></span><span class="num" style="font-size: 15px; color: #4A535D">{{r.time}}</span><input type="checkbox" checked="{{r.on}}" onChange="{{r.toggle}}" aria-label="{{r.aria}}"></label>
+</sc-for>
+</section>
+
+<section aria-labelledby="h-meas">
+<h2 id="h-meas" style="margin: 0 0 4px; font-size: 17px; line-height: 24px; font-weight: 600">Замеры</h2>
+<sc-for list="{{meas}}" as="r" hint-placeholder-count="1">
+<label class="it"><span style="flex-grow: 1; display: flex; flex-direction: column; line-height: 20px"><span>{{r.title}}</span><span style="font-size: 15px; color: #4A535D">{{r.sub}}</span></span><span class="num" style="font-size: 15px; color: #4A535D">{{r.time}}</span><input type="checkbox" checked="{{r.on}}" onChange="{{r.toggle}}" aria-label="{{r.aria}}"></label>
+</sc-for>
+<sc-if value="{{closed}}" hint-placeholder-val="{{ true }}"><button type="button" class="sbtn" onClick="{{open}}" style="margin-top: 16px">Добавить напоминание о замере</button></sc-if>
+<sc-if value="{{opened}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #D9DDE2">
+<label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 15px; font-weight: 500">Что измерить</span><select class="f" value="{{nt}}" onChange="{{onNt}}"><option value="Глюкоза перед сном">Глюкоза перед сном</option><option value="Глюкоза через 2 часа после еды">Глюкоза после еды</option><option value="Давление вечером">Давление вечером</option></select></label>
+<label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 15px; font-weight: 500">Время</span><input class="f num" type="time" value="{{nTime}}" onChange="{{onTime}}"></label>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px"><button type="button" class="sbtn" onClick="{{cancel}}">Отмена</button><button type="button" class="pbtn" onClick="{{add}}">Добавить</button></div>
+</div>
+</sc-if>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { off: {}, extra: [], form: false, nt: 'Глюкоза перед сном', nTime: '21:00' }; }
+  renderVals() {
+    var self = this, s = this.state;
+    var mk = function (list) {
+      return list.map(function (r) {
+        var on = !s.off[r.id];
+        return Object.assign({}, r, { on: on, aria: (on ? 'Выключить: ' : 'Включить: ') + r.title + ', ' + r.time,
+          toggle: function () { var m = Object.assign({}, self.state.off); m[r.id] = on; self.setState({ off: m }); } });
+      });
+    };
+    return {
+      meds: mk([
+        { id: 'm1', title: 'Метформин 1000 мг', sub: 'после завтрака', time: '09:00' },
+        { id: 'm3', title: 'Гликлазид МВ 60 мг', sub: 'утром', time: '09:00' },
+        { id: 'm2', title: 'Метформин 1000 мг', sub: 'после ужина', time: '19:00' }
+      ]),
+      meas: mk([{ id: 'g1', title: 'Глюкоза натощак', sub: 'каждый день', time: '08:00' }].concat(s.extra)),
+      closed: !s.form, opened: s.form, nt: s.nt, nTime: s.nTime,
+      open: function () { self.setState({ form: true }); },
+      cancel: function () { self.setState({ form: false }); },
+      onNt: function (e) { self.setState({ nt: e.target.value }); },
+      onTime: function (e) { self.setState({ nTime: e.target.value }); },
+      add: function () { var st = self.state; self.setState({ form: false, extra: st.extra.concat([{ id: 'x' + st.extra.length, title: st.nt, sub: 'каждый день', time: st.nTime }]) }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
