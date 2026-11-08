@@ -9,6 +9,8 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 
 import auth
+import seed
+import welcome
 from db import get_db_connection
 
 # Настройки БД и SECRET_KEY — в backend/.env (образец: .env.example)
@@ -26,6 +28,8 @@ app.config.update(
 )
 CORS(app, supports_credentials=True, origins=os.environ.get('FRONTEND_ORIGIN', 'http://localhost:5173'))
 app.register_blueprint(auth.bp)
+app.register_blueprint(welcome.bp)
+app.cli.add_command(seed.seed_demo)
 
 
 @app.route('/api/health', methods=['GET'])
