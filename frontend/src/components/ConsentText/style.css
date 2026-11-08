@@ -1,0 +1,16 @@
+.consent-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  overflow-y: auto;
+  padding: var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  background: var(--bg);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.consent-text__todo {
+  color: var(--text-3);
+}

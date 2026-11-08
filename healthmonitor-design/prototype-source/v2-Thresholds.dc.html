@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Пороги алертов</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F6F7F8}
+a{color:#1D5FA8}a:hover{color:#164C87}
+:focus-visible{outline:2px solid #1D5FA8;outline-offset:2px}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;border-radius:4px;border:1px solid #B9C0C8;background:#FFFFFF;color:#1B1F24;font:inherit;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#F0F2F4}
+.btn-primary{background:#1D5FA8;border-color:#1D5FA8;color:#FFFFFF}.btn-primary:hover{background:#164C87;border-color:#164C87}
+.btn:disabled{background:#F0F2F4;border-color:#D9DDE2;color:#8A939D;cursor:not-allowed}
+.nav{display:flex;align-items:center;height:48px;padding:0 4px;color:#4A535D;text-decoration:none;border-bottom:2px solid transparent;box-sizing:border-box}
+.nav:hover{color:#1B1F24}
+.cnt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;margin-left:6px;border-radius:9px;background:#B42318;color:#FFFFFF;font-size:11px;font-weight:600}
+.field{height:32px;box-sizing:border-box;padding:0 10px;border:1px solid #B9C0C8;border-radius:4px;background:#FFFFFF;font:inherit;font-size:14px;color:#1B1F24}
+.cell{width:100%;height:32px;box-sizing:border-box;padding:0 8px;border:1px solid #B9C0C8;border-radius:4px;background:#FFFFFF;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:14px;color:#1B1F24;text-align:right}
+.trow{display:grid;grid-template-columns:minmax(200px,1.6fr) repeat(4,minmax(110px,1fr)) 110px;gap:12px;align-items:center;padding:10px 16px;border-bottom:1px solid #ECEEF1}
+.thd{font-size:12px;line-height:16px;color:#646E78;padding-top:8px;padding-bottom:8px;border-bottom-color:#D9DDE2}
+.opt{display:flex;align-items:flex-start;gap:8px;padding:6px 0;cursor:pointer}
+.opt input{width:16px;height:16px;margin:2px 0 0;accent-color:#1D5FA8;flex-shrink:0}
+@media (max-width:700px){.btn,.field,.cell{height:44px}}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F6F7F8; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #1B1F24; font-size: 14px; line-height: 20px; display: flex; flex-direction: column">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px; padding: 0 24px; background: #FFFFFF; border-bottom: 1px solid #D9DDE2">
+<span style="font-weight: 600; font-size: 15px">HealthMonitor</span>
+<nav aria-label="Разделы" style="display: flex; flex-wrap: wrap; gap: 0 20px; flex-grow: 1">
+<a class="nav" href="v2-Worklist.dc.html">Пациенты</a>
+<a class="nav" href="v2-Alerts.dc.html">Алерты<span class="cnt">2</span></a>
+<a class="nav" href="v2-Messages.dc.html">Сообщения</a>
+<a class="nav" href="v2-Reports.dc.html">Отчёты</a>
+<a class="nav" href="v2-Thresholds.dc.html" aria-current="page" style="color: #1B1F24; font-weight: 600; border-bottom-color: #1D5FA8">Пороги</a>
+</nav>
+<span style="font-size: 13px; color: #4A535D">Смирнова Е. А. · эндокринолог · <a href="v2-Login.dc.html">Выйти</a></span>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 16px 24px 12px">
+<div style="display: flex; flex-direction: column"><h1 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600">Пороги алертов</h1><span style="color: #4A535D">Значение за критическим порогом создаёт критический алерт, за порогом внимания — алерт без эскалации</span></div>
+<label style="display: flex; align-items: center; gap: 8px"><span style="font-size: 13px; font-weight: 500">Применяется к</span><select class="field" value="{{scope}}" onChange="{{onScope}}"><option value="kov">Пациент: Ковалёва Н. П.</option><option value="tpl-dm">Шаблон: сахарный диабет</option><option value="tpl-ah">Шаблон: гипертония</option><option value="tpl-ba">Шаблон: астма</option></select></label>
+</div>
+
+<main style="padding: 0 24px 32px; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+<section aria-label="Пороги показателей" style="flex: 999 1 720px; min-width: 0; background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; overflow-x: auto">
+<div style="min-width: 860px">
+<div class="trow thd"><span>Показатель</span><span style="text-align: right">Критично ниже</span><span style="text-align: right">Внимание ниже</span><span style="text-align: right">Внимание выше</span><span style="text-align: right">Критично выше</span><span>Единицы</span></div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+<div class="trow" style="{{r.rowStyle}}">
+<span style="display: flex; flex-direction: column"><span style="font-weight: 500">{{r.label}}</span><sc-if value="{{r.bad}}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; line-height: 16px; color: #B42318">Пороги должны возрастать слева направо</span></sc-if><sc-if value="{{r.good}}" hint-placeholder-val="{{ true }}"><span style="font-size: 12px; line-height: 16px; color: #646E78">цель {{r.target}}</span></sc-if></span>
+<label><span class="vh">{{r.label}}: критично ниже</span><input class="cell" inputmode="decimal" value="{{r.v0}}" onChange="{{r.on0}}" style="{{r.cs}}"></label>
+<label><span class="vh">{{r.label}}: внимание ниже</span><input class="cell" inputmode="decimal" value="{{r.v1}}" onChange="{{r.on1}}" style="{{r.cs}}"></label>
+<label><span class="vh">{{r.label}}: внимание выше</span><input class="cell" inputmode="decimal" value="{{r.v2}}" onChange="{{r.on2}}" style="{{r.cs}}"></label>
+<label><span class="vh">{{r.label}}: критично выше</span><input class="cell" inputmode="decimal" value="{{r.v3}}" onChange="{{r.on3}}" style="{{r.cs}}"></label>
+<span style="color: #4A535D">{{r.unit}}</span>
+</div>
+</sc-for>
+</div>
+<p style="margin: 0; padding: 10px 16px; font-size: 13px; color: #4A535D">Пустое поле — порог не используется. ПСВ задаётся в процентах от лучшего результата пациента.</p>
+</section>
+
+<aside aria-label="Эскалация и уведомления" style="flex: 1 1 320px; min-width: 0; background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">Эскалация и уведомления</h2>
+<label style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 13px; font-weight: 500">Передать дежурному врачу без реакции через</span><select class="field" value="{{esc}}" onChange="{{onEsc}}"><option value="10">10 минут</option><option value="15">15 минут</option><option value="20">20 минут</option></select></label>
+<label class="opt"><input type="checkbox" checked="{{rel}}" onChange="{{onRel}}"><span style="display: flex; flex-direction: column"><span>SMS родственнику при критичном значении</span><span style="font-size: 12px; line-height: 16px; color: #646E78">только при согласии пациента</span></span></label>
+<label class="opt"><input type="checkbox" checked="{{nodata}}" onChange="{{onNodata}}"><span style="display: flex; flex-direction: column"><span>Алерт «нет данных»</span><span style="font-size: 12px; line-height: 16px; color: #646E78">если нет измерений 2 дня</span></span></label>
+<div style="display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid #ECEEF1">
+<button type="button" class="btn btn-primary" onClick="{{save}}" disabled="{{anyBad}}" style="align-self: flex-start">Сохранить</button>
+<span style="{{savedStyle}}">{{savedText}}</span>
+</div>
+</aside>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { scope: 'kov', esc: '15', rel: true, nodata: true, saved: false,
+      v: { g: ['3,9', '4,4', '10,0', '13,9'], s: ['90', '100', '140', '160'], d: ['', '', '90', '100'], f: ['50', '80', '', ''] } };
+  }
+  renderVals() {
+    var self = this, s = this.state;
+    var M = [['g', 'Глюкоза крови', 'ммоль/л'], ['s', 'Давление, верхнее', 'мм рт. ст.'], ['d', 'Давление, нижнее', 'мм рт. ст.'], ['f', 'Пиковая скорость выдоха', '% от лучшего']];
+    var n = function (x) { var t = String(x || '').trim(); return t === '' ? null : parseFloat(t.replace(',', '.')); };
+    var anyBad = false;
+    var rows = M.map(function (m) {
+      var v = s.v[m[0]];
+      var nums = v.map(n).filter(function (x) { return x !== null; });
+      var bad = v.map(n).some(function (x) { return x !== null && isNaN(x); });
+      for (var i = 1; i < nums.length; i++) if (!(nums[i] > nums[i - 1])) bad = true;
+      if (bad) anyBad = true;
+      var lo = v[1] || v[0], hi = v[2] || v[3];
+      var on = function (i) { return function (e) { var all = JSON.parse(JSON.stringify(self.state.v)); all[m[0]][i] = e.target.value; self.setState({ v: all, saved: false }); }; };
+      return { label: m[1], unit: m[2], v0: v[0], v1: v[1], v2: v[2], v3: v[3], on0: on(0), on1: on(1), on2: on(2), on3: on(3),
+        bad: bad, good: !bad, target: (lo ? 'от ' + lo : '') + (lo && hi ? ' ' : '') + (hi ? 'до ' + hi : ''),
+        rowStyle: bad ? 'background: #FFFBFA' : '', cs: bad ? 'border-color: #B42318' : '' };
+    });
+    var flip = function (k) { return function () { var u = { saved: false }; u[k] = !self.state[k]; self.setState(u); }; };
+    return {
+      rows: rows, anyBad: anyBad, scope: s.scope, esc: s.esc, rel: s.rel, nodata: s.nodata,
+      savedText: anyBad ? 'Исправьте пороги, отмеченные красным' : s.saved ? 'Сохранено в 10:45 · записано в журнал аудита' : 'Изменения применятся к новым измерениям',
+      savedStyle: 'font-size: 12px; line-height: 16px; color: ' + (anyBad ? '#B42318' : s.saved ? '#1B1F24' : '#646E78'),
+      onScope: function (e) { self.setState({ scope: e.target.value, saved: false }); },
+      onEsc: function (e) { self.setState({ esc: e.target.value, saved: false }); },
+      onRel: flip('rel'), onNodata: flip('nodata'),
+      save: function () { self.setState({ saved: true }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

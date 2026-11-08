@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HealthMonitor — страницы v2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+body{margin:0;background:#F6F7F8;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#1B1F24;font-size:14px;line-height:20px}
+main{max-width:960px;margin:0 auto;padding:32px 16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:16px}
+h1{grid-column:1/-1;margin:0;font-size:20px;line-height:28px;font-weight:600}
+section{background:#fff;border:1px solid #D9DDE2;border-radius:6px;padding:16px}
+h2{margin:0 0 8px;font-size:16px;line-height:24px;font-weight:600}
+a{display:block;padding:4px 0;color:#1D5FA8}
+a:focus-visible{outline:2px solid #1D5FA8;outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+<h1>HealthMonitor · страницы v2</h1>
+<section><h2>Общие</h2><a href="Login.html">Вход</a><a href="Recover.html">Восстановление пароля</a><a href="states/Recover-code-error.html">— неверный код</a><a href="states/Recover-new-password.html">— новый пароль</a><a href="states/Recover-done.html">— пароль изменён</a><a href="First-Login.html">Первый вход пациента</a><a href="states/First-Login-password.html">— пароль</a><a href="states/First-Login-consent.html">— согласия</a><a href="states/First-Login-done.html">— готово</a><a href="Register.html">Заявка на доступ</a><a href="states/Register-consent.html">— шаг «Согласие»</a><a href="states/Register-done.html">— шаг «Отправлено»</a></section>
+<section><h2>Врач</h2><a href="Worklist.html">Рабочий список</a><a href="Record.html">Медкарта · Показатели</a><a href="states/Record-meds.html">— Назначения</a><a href="states/Record-chat.html">— Переписка</a><a href="states/Record-alert-log.html">— Журнал алертов</a><a href="states/Record-alert-accepted.html">— Алерт принят</a><a href="Alerts.html">Алерты</a><a href="states/Alerts-closed.html">— закрытые</a><a href="Messages.html">Сообщения</a><a href="Reports.html">Отчёты</a><a href="Thresholds.html">Пороги</a><a href="states/Thresholds-error.html">— ошибка в порогах</a></section>
+<section><h2>Пациент</h2><a href="Patient-Home.html">Сегодня</a><a href="Patient-Health.html">История</a><a href="Patient-Entry.html">Ввод показателя · критичное значение</a><a href="states/Patient-Entry-normal.html">— значение в норме</a><a href="states/Patient-Entry-error.html">— ошибка ввода</a><a href="Patient-Alert.html">Критический показатель</a><a href="Patient-Reminders.html">Напоминания</a><a href="Patient-Chat.html">Чат с врачом</a><a href="Patient-Profile.html">Профиль</a><a href="Patient-Devices.html">Устройства</a><a href="Password-Change.html">Смена пароля</a><a href="states/Password-Change-error.html">— неверный текущий</a><a href="states/Password-Change-done.html">— пароль изменён</a></section>
+<section><h2>Родственник</h2><a href="Relative-Home.html">Главная</a></section>
+<section><h2>Администратор</h2><a href="Admin.html">Заявки</a><a href="states/Admin-users.html">— Пользователи</a><a href="states/Admin-audit.html">— Журнал аудита</a></section>
+<section><h2>Справочное</h2><a href="Rules.html">Правила интерфейса</a></section>
+</main>
+</body>
+</html>

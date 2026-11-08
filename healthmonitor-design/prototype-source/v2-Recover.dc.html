@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Восстановление пароля</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F6F7F8}
+a{color:#1D5FA8}a:hover{color:#164C87}
+:focus-visible{outline:2px solid #1D5FA8;outline-offset:2px}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.field{height:40px;box-sizing:border-box;padding:0 12px;border:1px solid #B9C0C8;border-radius:4px;background:#FFFFFF;font:inherit;font-size:15px;color:#1B1F24;width:100%}
+.field-bad{border-color:#B42318}
+.code{font-family:'IBM Plex Mono',ui-monospace,monospace;letter-spacing:6px;font-size:20px;max-width:200px}
+.lbl{font-size:13px;font-weight:500}
+.hint{font-size:12px;line-height:16px;color:#646E78}
+.err{margin:0;font-size:13px;line-height:18px;color:#B42318}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 16px;border-radius:4px;border:1px solid #B9C0C8;background:#FFFFFF;color:#1B1F24;font:inherit;font-size:15px;font-weight:500;text-decoration:none;cursor:pointer}
+.btn:hover{background:#F0F2F4;color:#1B1F24}
+.btn-primary{background:#1D5FA8;border-color:#1D5FA8;color:#FFFFFF;font-weight:600}.btn-primary:hover{background:#164C87;border-color:#164C87;color:#FFFFFF}
+.btn:disabled{background:#F0F2F4;border-color:#D9DDE2;color:#8A939D;cursor:not-allowed}
+.lbtn{border:none;background:none;padding:0;font:inherit;color:#1D5FA8;text-decoration:underline;cursor:pointer}
+.lbtn:disabled{color:#8A939D;text-decoration:none;cursor:default}
+.rule{display:flex;gap:8px;font-size:13px;line-height:18px}
+.proto{padding:12px;background:#F6F7F8;border:1px dashed #B9C0C8;border-radius:4px;font-size:12px;line-height:16px;color:#4A535D}
+@media (max-width:700px){.field,.btn{height:48px}}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; padding: 48px 16px; background: #F6F7F8; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #1B1F24; font-size: 14px; line-height: 20px; display: flex; flex-direction: column; align-items: center; gap: 24px">
+
+<div style="width: 100%; max-width: 440px; display: flex; justify-content: space-between; align-items: baseline; gap: 12px"><a href="v2-Login.dc.html" style="font-weight: 600; font-size: 17px; color: #1B1F24; text-decoration: none">HealthMonitor</a><a href="v2-Login.dc.html">Вход</a></div>
+
+<main style="width: 100%; max-width: 440px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px"><h1 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600">{{title}}</h1><sc-if value="{{showStep}}" hint-placeholder-val="{{ true }}"><span style="color: #4A535D">Шаг {{step}} из 3</span></sc-if></div>
+
+<sc-if value="{{s1}}" hint-placeholder-val="{{ true }}">
+<p style="margin: 0; color: #4A535D">Укажите телефон или e-mail, с которым входите. Пришлём код для сброса пароля.</p>
+<label style="display: flex; flex-direction: column; gap: 4px"><span class="lbl">Телефон или e-mail</span><input class="field" autocomplete="username" value="{{login}}" onChange="{{onLogin}}"></label>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 12px; border-top: 1px solid #ECEEF1"><a href="v2-Login.dc.html">Вернуться ко входу</a><button type="button" class="btn btn-primary" onClick="{{send}}" disabled="{{off1}}">Получить код</button></div>
+</sc-if>
+
+<sc-if value="{{s2}}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; color: #4A535D">Код отправлен на <span class="num" style="color: #1B1F24">{{masked}}</span>. Он действует 10 минут.</p>
+<label style="display: flex; flex-direction: column; gap: 4px"><span class="lbl">Код из SMS</span><input class="{{codeClass}}" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="{{code}}" onChange="{{onCode}}" disabled="{{locked}}" aria-invalid="{{codeBad}}"></label>
+<sc-if value="{{codeBad}}" hint-placeholder-val="{{ false }}"><p role="alert" class="err">{{codeErr}}</p></sc-if>
+<div style="display: flex; gap: 6px; align-items: baseline"><button type="button" class="lbtn" onClick="{{resend}}" disabled="{{resendOff}}">Отправить код ещё раз</button><span class="hint">{{resendHint}}</span></div>
+<p class="proto">Прототип: верный код — <span class="num">123456</span>. Любой другой покажет ошибку; после трёх ошибок ввод блокируется до нового кода.</p>
+<div style="display: flex; justify-content: space-between; gap: 8px; padding-top: 12px; border-top: 1px solid #ECEEF1"><button type="button" class="btn" onClick="{{back}}">Назад</button><button type="button" class="btn btn-primary" onClick="{{check}}" disabled="{{off2}}">Подтвердить</button></div>
+</sc-if>
+
+<sc-if value="{{s3}}" hint-placeholder-val="{{ false }}">
+<label style="display: flex; flex-direction: column; gap: 4px"><span class="lbl">Новый пароль</span><input class="field" type="password" autocomplete="new-password" value="{{p1}}" onChange="{{onP1}}"></label>
+<ul aria-label="Требования к паролю" style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px">
+<sc-for list="{{rules}}" as="r" hint-placeholder-count="3"><li class="rule" style="{{r.style}}"><span aria-hidden="true" style="width: 12px">{{r.mark}}</span><span>{{r.text}}<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">{{r.sr}}</span></span></li></sc-for>
+</ul>
+<label style="display: flex; flex-direction: column; gap: 4px"><span class="lbl">Повторите пароль</span><input class="{{p2Class}}" type="password" autocomplete="new-password" value="{{p2}}" onChange="{{onP2}}" aria-invalid="{{mismatch}}"></label>
+<sc-if value="{{mismatch}}" hint-placeholder-val="{{ false }}"><p role="alert" class="err">Пароли не совпадают</p></sc-if>
+<div style="display: flex; justify-content: flex-end; padding-top: 12px; border-top: 1px solid #ECEEF1"><button type="button" class="btn btn-primary" onClick="{{save}}" disabled="{{off3}}">Сохранить пароль</button></div>
+</sc-if>
+
+<sc-if value="{{s4}}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0">Пароль изменён. Мы завершили все открытые сеансы на других устройствах и отправили SMS-уведомление о смене пароля.</p>
+<p style="margin: 0; color: #4A535D">Если это были не вы, позвоните в клинику: <a class="num" href="tel:+70000000000">+7 (000) 000-00-00</a>.</p>
+<div><a class="btn btn-primary" href="v2-Login.dc.html">Войти с новым паролем</a></div>
+</sc-if>
+</main>
+
+<p style="margin: 0; width: 100%; max-width: 440px; font-size: 12px; line-height: 16px; color: #646E78">Если доступа к телефону нет, восстановить вход может только администратор клиники после проверки личности.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { step: 1, login: '', code: '', bad: 0, tried: false, resent: false, p1: '', p2: '' }; }
+  renderVals() {
+    var self = this, s = this.state;
+    var set = function (k) { return function (e) { var u = {}; u[k] = e.target.value; if (k === 'code') u.tried = false; self.setState(u); }; };
+    var login = (s.login || '').trim();
+    var digits = login.replace(/\D/g, '');
+    var masked = login.indexOf('@') > 0 ? login.replace(/^(.).*(@.*)$/, '$1•••$2') : '+7 ••• ••• ' + digits.slice(-4, -2) + ' ' + digits.slice(-2);
+    var locked = s.bad >= 3;
+    var codeBad = s.tried || locked;
+    var p1 = s.p1 || '';
+    var R = [
+      [p1.length >= 8, 'не короче 8 символов'],
+      [/[A-Za-zА-Яа-яЁё]/.test(p1) && /\d/.test(p1), 'буквы и хотя бы одна цифра'],
+      [p1.length > 0 && p1 !== login && p1.indexOf(digits || '###') < 0, 'не совпадает с телефоном или e-mail']
+    ];
+    var rules = R.map(function (r) { return { mark: r[0] ? '✓' : '○', text: r[1], sr: r[0] ? ' — выполнено' : ' — не выполнено', style: r[0] ? 'color: #1B1F24' : 'color: #646E78' }; });
+    var allOk = R.every(function (r) { return r[0]; });
+    var mismatch = (s.p2 || '').length > 0 && s.p2 !== p1;
+    return {
+      step: s.step, s1: s.step === 1, s2: s.step === 2, s3: s.step === 3, s4: s.step === 4, showStep: s.step < 4,
+      title: ['Восстановление пароля', 'Введите код', 'Новый пароль', 'Готово'][s.step - 1],
+      login: s.login, code: s.code, p1: s.p1, p2: s.p2, masked: masked,
+      off1: !(login.indexOf('@') > 0 || digits.length >= 10),
+      off2: locked || (s.code || '').replace(/\D/g, '').length !== 6,
+      off3: !allOk || s.p2 !== p1,
+      locked: locked, codeBad: codeBad,
+      codeClass: 'field code' + (codeBad ? ' field-bad' : ''),
+      codeErr: locked ? 'Слишком много неверных попыток. Запросите новый код.' : 'Неверный код. Осталось попыток: ' + (3 - s.bad) + '.',
+      resendOff: s.resent && !locked,
+      resendHint: s.resent && !locked ? 'новый код отправлен · повторно через 0:59' : '',
+      rules: rules, mismatch: mismatch, p2Class: 'field' + (mismatch ? ' field-bad' : ''),
+      onLogin: set('login'), onCode: set('code'), onP1: set('p1'), onP2: set('p2'),
+      send: function () { self.setState({ step: 2 }); },
+      back: function () { self.setState({ step: 1, code: '', bad: 0, tried: false, resent: false }); },
+      resend: function () { self.setState({ resent: true, bad: 0, tried: false, code: '' }); },
+      check: function () {
+        if ((self.state.code || '').trim() === '123456') self.setState({ step: 3 });
+        else self.setState({ bad: self.state.bad + 1, tried: true });
+      },
+      save: function () { self.setState({ step: 4 }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

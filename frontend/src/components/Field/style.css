@@ -1,0 +1,74 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.field__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-3);
+  font-size: 13px;
+}
+
+.field__label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.field__label .optional {
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.field__control {
+  width: 100%;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-control);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.field__control:disabled {
+  background: var(--surface-sub);
+  color: var(--text-disabled);
+}
+
+.field__control--bad {
+  border-color: var(--crit);
+}
+
+.field__control--sm {
+  height: var(--control-h);
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+.field__control--md {
+  height: 40px;
+  font-size: 15px;
+}
+
+.field__control--lg {
+  height: var(--control-h-mobile);
+  font: var(--tm-body);
+}
+
+.field__error {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--crit);
+}
+
+@media (max-width: 700px) {
+  .field__control--sm {
+    height: var(--control-h-touch);
+  }
+
+  .field__control--md {
+    height: var(--control-h-mobile);
+  }
+}
