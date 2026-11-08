@@ -1,0 +1,66 @@
+.doctor-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Заголовок страницы врача: название, пояснение, фильтры справа */
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-4);
+  padding: var(--s-4) var(--page-x) var(--s-3);
+}
+
+.page-head h1 {
+  font: var(--t-page);
+}
+
+.page-head__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-left: auto;
+}
+
+.page-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--s-4);
+  padding: 0 var(--page-x) var(--s-6);
+}
+
+/* Компактная таблица внутри панели */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--t-table);
+}
+
+.data-table th {
+  padding: var(--s-1) var(--s-4);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-3);
+  font-weight: 500;
+  text-align: left;
+}
+
+.data-table td {
+  padding: 6px var(--s-4);
+  border-bottom: 1px solid var(--border-row);
+  color: var(--text-2);
+}
+
+.data-table .data-table__num {
+  text-align: right;
+}
+
+@media (max-width: 700px) {
+  .page-head,
+  .page-body {
+    padding-right: var(--page-x-mobile);
+    padding-left: var(--page-x-mobile);
+  }
+}

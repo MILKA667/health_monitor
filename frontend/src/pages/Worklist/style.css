@@ -1,0 +1,199 @@
+.worklist {
+  flex: 999 1 640px;
+  overflow: hidden;
+}
+
+.worklist__search {
+  width: 220px;
+}
+
+.worklist__scroll {
+  overflow-x: auto;
+}
+
+.worklist__table {
+  min-width: 880px;
+}
+
+.worklist__row {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.6fr) minmax(130px, 1fr) minmax(150px, 1fr) minmax(120px, 0.9fr) 80px minmax(160px, 1.1fr);
+  gap: var(--s-3);
+  align-items: center;
+  min-height: var(--row-h);
+  padding: 6px var(--s-4) 6px 13px;
+  border-bottom: 1px solid var(--border-row);
+  border-left: 3px solid transparent;
+}
+
+.worklist__row--head {
+  min-height: 0;
+  padding: var(--s-2) var(--s-4);
+  border-bottom-color: var(--border);
+  border-left: none;
+  font: var(--t-caption);
+  font-weight: 400;
+  color: var(--text-2);
+}
+
+.worklist__row--selected {
+  border-left-color: var(--primary);
+  background: var(--selected);
+}
+
+.worklist__patient {
+  display: flex;
+  flex-direction: column;
+}
+
+.worklist__name {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.worklist__name:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.worklist__meta {
+  font: var(--t-caption);
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.worklist__deviation {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.worklist__deviation--crit {
+  color: var(--crit);
+}
+
+.worklist__deviation--warn {
+  color: var(--warn-text);
+}
+
+.worklist__alert {
+  color: var(--text-2);
+}
+
+.worklist__alert--pending {
+  color: var(--crit);
+  font-weight: 600;
+}
+
+.worklist__alert--over {
+  color: var(--crit-text-on-bg);
+  font-weight: 600;
+}
+
+.worklist__empty {
+  padding: var(--s-6) var(--s-4);
+  color: var(--text-2);
+}
+
+/* Сводка по пациенту */
+.summary {
+  flex: 1 1 340px;
+}
+
+.summary__loading,
+.summary__empty {
+  padding: var(--s-4);
+}
+
+.summary__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.summary__head h2 {
+  font: var(--t-section);
+}
+
+.summary__alert {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--crit-bg);
+  color: var(--crit-text-on-bg);
+}
+
+.summary__alert--accepted {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.summary__alert-title {
+  font-weight: 600;
+}
+
+.summary__alert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-1);
+}
+
+.summary__caption {
+  padding: var(--s-3) var(--s-4) var(--s-1);
+  font: var(--t-caption);
+  font-weight: 400;
+  color: var(--text-2);
+}
+
+.summary__value {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.summary__value--crit {
+  color: var(--crit);
+}
+
+.summary__value--warn {
+  color: var(--warn-text);
+}
+
+.summary__facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px var(--s-4);
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  font-size: 13px;
+}
+
+.summary__facts dt {
+  color: var(--text-3);
+}
+
+.summary__facts dd {
+  margin: 0;
+}
+
+.summary__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4) var(--s-4);
+  border-top: 1px solid var(--border);
+}
+
+.worklist .form-error,
+.summary .form-error {
+  padding: var(--s-3) var(--s-4);
+}
