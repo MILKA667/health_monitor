@@ -1,0 +1,18 @@
+.step-progress {
+  display: flex;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step-progress li {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+}
+
+.step-progress li.step-progress__done {
+  background: var(--primary);
+}

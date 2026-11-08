@@ -1,0 +1,26 @@
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.choice__input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--primary);
+}
+
+.choice .required {
+  color: var(--crit);
+}
+
+@media (max-width: 700px) {
+  .choice {
+    align-items: center;
+    min-height: var(--control-h-touch);
+  }
+}

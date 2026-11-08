@@ -1,0 +1,13 @@
+.value-cell__value--crit {
+  color: var(--crit);
+  font-weight: 500;
+}
+
+.value-cell__value--warn {
+  color: var(--warn-text);
+}
+
+.value-cell__unit {
+  font-size: 12px;
+  color: var(--text-3);
+}
