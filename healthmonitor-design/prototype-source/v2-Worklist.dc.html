@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Рабочий список врача</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F6F7F8}
+a{color:#1D5FA8}a:hover{color:#164C87}
+:focus-visible{outline:2px solid #1D5FA8;outline-offset:2px}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border-radius:4px;border:1px solid #B9C0C8;background:#FFFFFF;color:#1B1F24;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#F0F2F4;color:#1B1F24}
+.btn-primary{background:#1D5FA8;border-color:#1D5FA8;color:#FFFFFF}.btn-primary:hover{background:#164C87;border-color:#164C87;color:#FFFFFF}
+.btn-danger{background:#B42318;border-color:#B42318;color:#FFFFFF}.btn-danger:hover{background:#912018;border-color:#912018;color:#FFFFFF}
+.nav{display:flex;align-items:center;height:48px;padding:0 4px;color:#4A535D;text-decoration:none;border-bottom:2px solid transparent;box-sizing:border-box}
+.nav:hover{color:#1B1F24}
+.cnt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;margin-left:6px;border-radius:9px;background:#B42318;color:#FFFFFF;font-size:11px;font-weight:600}
+.rowbtn{background:none;border:none;padding:0;font:inherit;font-weight:600;color:#1B1F24;cursor:pointer;text-align:left}
+.rowbtn:hover{color:#1D5FA8;text-decoration:underline}
+.grp{display:flex;align-items:center;gap:8px;width:100%;height:32px;padding:0 16px;border:none;border-bottom:1px solid #D9DDE2;background:#F0F2F4;font:inherit;font-size:13px;font-weight:600;color:#1B1F24;text-align:left;cursor:pointer}
+.field{height:32px;box-sizing:border-box;padding:0 10px;border:1px solid #B9C0C8;border-radius:4px;background:#FFFFFF;font:inherit;font-size:14px;color:#1B1F24}
+@media (max-width:700px){.btn,.field{height:44px}.grp{height:44px}}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F6F7F8; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #1B1F24; font-size: 14px; line-height: 20px; display: flex; flex-direction: column">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 24px; padding: 0 24px; background: #FFFFFF; border-bottom: 1px solid #D9DDE2">
+<span style="font-weight: 600; font-size: 15px">HealthMonitor</span>
+<nav aria-label="Разделы" style="display: flex; flex-wrap: wrap; gap: 0 20px; flex-grow: 1">
+<a class="nav" href="v2-Worklist.dc.html" aria-current="page" style="color: #1B1F24; font-weight: 600; border-bottom-color: #1D5FA8">Пациенты</a>
+<a class="nav" href="v2-Alerts.dc.html">Алерты<span class="cnt">2</span></a>
+<a class="nav" href="v2-Messages.dc.html">Сообщения</a>
+<a class="nav" href="v2-Reports.dc.html">Отчёты</a>
+<a class="nav" href="v2-Thresholds.dc.html">Пороги</a>
+</nav>
+<span style="font-size: 13px; color: #4A535D">Смирнова Е. А. · эндокринолог · <a href="v2-Login.dc.html">Выйти</a></span>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 16px 24px 12px">
+<h1 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600">Пациенты</h1>
+<span style="color: #4A535D">Ср, 28.10.2026 · обновлено в <span class="num">10:42</span></span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto">
+<label><span class="vh">Поиск по ФИО</span><input class="field" type="search" placeholder="Поиск по ФИО" value="{{q}}" onChange="{{onQ}}" style="width: 220px"></label>
+<label><span class="vh">Нозология</span><select class="field" value="{{dx}}" onChange="{{onDx}}"><option value="all">Все нозологии</option><option value="dm">Сахарный диабет</option><option value="ah">Артериальная гипертония</option><option value="ba">Бронхиальная астма</option></select></label>
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; padding: 0 24px 24px">
+
+<section aria-label="Рабочий список" style="flex: 999 1 640px; min-width: 0; background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; overflow: hidden">
+<div style="overflow-x: auto">
+<div style="min-width: 880px">
+<div style="display: grid; grid-template-columns: minmax(200px, 1.6fr) minmax(130px, 1fr) minmax(150px, 1fr) minmax(120px, 0.9fr) 80px minmax(160px, 1.1fr); gap: 12px; padding: 8px 16px; font-size: 12px; line-height: 16px; color: #4A535D; border-bottom: 1px solid #D9DDE2">
+<span>Пациент</span><span>Нозология</span><span>Последний показатель</span><span>Отклонение</span><span>Время</span><span>Алерт</span>
+</div>
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+<button type="button" class="grp" onClick="{{g.toggle}}" aria-expanded="{{g.expanded}}"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" style="{{g.chev}}"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg><span style="{{g.dot}}"></span>{{g.label}}<span class="num" style="font-weight: 400; color: #4A535D">{{g.count}}</span></button>
+<sc-if value="{{g.open}}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{g.rows}}" as="r" hint-placeholder-count="2">
+<div style="{{r.rowStyle}}">
+<div style="display: flex; flex-direction: column"><button type="button" class="rowbtn" onClick="{{r.select}}" aria-pressed="{{r.pressed}}">{{r.name}}</button><span style="font-size: 12px; line-height: 16px; color: #646E78">{{r.meta}}</span></div>
+<span style="color: #4A535D">{{r.dxName}}</span>
+<span><span class="num" style="{{r.valStyle}}">{{r.value}}</span> <span style="font-size: 12px; color: #646E78">{{r.unit}}</span></span>
+<span class="num" style="{{r.devStyle}}">{{r.dev}}</span>
+<span class="num" style="color: #4A535D">{{r.time}}</span>
+<span style="{{r.alertStyle}}">{{r.alert}}</span>
+</div>
+</sc-for>
+</sc-if>
+</sc-for>
+<sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; padding: 24px 16px; color: #4A535D">Нет пациентов по заданным условиям.</p>
+</sc-if>
+</div>
+</div>
+</section>
+
+<aside aria-label="Сводка по пациенту" style="flex: 1 1 340px; min-width: 0; background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px">
+<div style="padding: 16px; border-bottom: 1px solid #D9DDE2; display: flex; flex-direction: column; gap: 2px">
+<h2 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">{{p.name}}</h2>
+<span style="color: #4A535D">{{p.meta}} · {{p.dxName}}</span>
+</div>
+<sc-if value="{{p.hasAlert}}" hint-placeholder-val="{{ true }}">
+<div style="{{p.alertBox}}">
+<span style="font-weight: 600">{{p.alertTitle}}</span>
+<span>{{p.alertText}}</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px">
+<sc-if value="{{p.pending}}" hint-placeholder-val="{{ true }}"><button type="button" class="btn btn-danger" onClick="{{p.accept}}">Принять алерт</button></sc-if>
+<sc-if value="{{p.done}}" hint-placeholder-val="{{ false }}"><button type="button" class="btn" onClick="{{p.accept}}">Отменить принятие</button></sc-if>
+</div>
+</div>
+</sc-if>
+<div style="padding: 12px 16px 4px; font-size: 12px; line-height: 16px; color: #4A535D">Последние измерения</div>
+<table style="width: 100%; border-collapse: collapse; font-size: 13px">
+<thead><tr><th scope="col" style="text-align: left; font-weight: 500; color: #646E78; padding: 4px 16px; border-bottom: 1px solid #D9DDE2">Дата</th><th scope="col" style="text-align: right; font-weight: 500; color: #646E78; padding: 4px 16px; border-bottom: 1px solid #D9DDE2">Значение</th><th scope="col" style="text-align: left; font-weight: 500; color: #646E78; padding: 4px 16px; border-bottom: 1px solid #D9DDE2">Источник</th></tr></thead>
+<tbody>
+<sc-for list="{{p.hist}}" as="h" hint-placeholder-count="4">
+<tr><td class="num" style="padding: 6px 16px; border-bottom: 1px solid #ECEEF1; color: #4A535D">{{h.t}}</td><td class="num" style="{{h.style}}">{{h.v}}</td><td style="padding: 6px 16px; border-bottom: 1px solid #ECEEF1; color: #4A535D">{{h.src}}</td></tr>
+</sc-for>
+</tbody>
+</table>
+<dl style="margin: 0; padding: 12px 16px; display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 13px">
+<dt style="color: #646E78">Цель</dt><dd class="num" style="margin: 0">{{p.target}}</dd>
+<dt style="color: #646E78">Устройство</dt><dd style="margin: 0">{{p.device}}</dd>
+<dt style="color: #646E78">Родственник</dt><dd style="margin: 0">{{p.relative}}</dd>
+</dl>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px 16px; border-top: 1px solid #D9DDE2">
+<a class="btn btn-primary" href="v2-Record.dc.html">Открыть медкарту</a>
+</div>
+</aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { q: '', dx: 'all', sel: 'kov', acc: {}, closed: { ok: true } };
+  }
+  renderVals() {
+    var self = this, s = this.state;
+    var DX = { dm: 'Сахарный диабет', ah: 'Гипертония', ba: 'Астма' };
+    var P = [
+      { id: 'kov', name: 'Ковалёва Нина Петровна', meta: '67 л. · полис …4821', dx: 'dm', lvl: 'crit', value: '2,9', unit: 'ммоль/л', dev: '−1,0 ниже 3,9', time: '10:38', esc: '10:53', target: '4,4–10,0 ммоль/л', device: 'Глюкометр, синхр. 10:38', relative: 'Ковалёв Д. С., сын · SMS 10:39',
+        hist: [['28.10 10:38', '2,9', 'c', 'Глюкометр'], ['27.10 21:05', '3,4', 'c', 'Глюкометр'], ['27.10 08:12', '3,8', 'c', 'Глюкометр'], ['26.10 08:30', '4,6', '', 'Вручную']] },
+      { id: 'sav', name: 'Савельев Игорь Андреевич', meta: '58 л. · полис …1907', dx: 'ah', lvl: 'crit', value: '182/108', unit: 'мм рт. ст.', dev: '+22 выше 160', time: '10:20', esc: '10:35', target: 'ниже 140/90 мм рт. ст.', device: 'Тонометр, синхр. 10:20', relative: 'Савельева М. В., жена · SMS 10:21',
+        hist: [['28.10 10:20', '182/108', 'c', 'Тонометр'], ['27.10 20:40', '171/102', 'c', 'Тонометр'], ['27.10 08:05', '158/96', 'w', 'Тонометр'], ['26.10 20:10', '160/98', 'w', 'Тонометр']] },
+      { id: 'muh', name: 'Мухина Дарья Олеговна', meta: '34 г. · полис …3375', dx: 'ba', lvl: 'warn', value: '290', unit: 'л/мин', dev: '62% от лучшего', time: '09:41', target: 'ПСВ ≥ 80% (≥ 375 л/мин)', device: 'Пикфлоуметр, вручную', relative: 'не указан',
+        hist: [['28.10 09:41', '290', 'w', 'Вручную'], ['27.10 09:30', '320', 'w', 'Вручную'], ['26.10 09:15', '350', 'w', 'Вручную'], ['25.10 09:20', '380', '', 'Вручную']] },
+      { id: 'pet', name: 'Петров Алексей Викторович', meta: '71 г. · полис …0482', dx: 'ah', lvl: 'warn', value: '152/94', unit: 'мм рт. ст.', dev: '+12 выше 140', time: '07:55', target: 'ниже 140/90 мм рт. ст.', device: 'Тонометр, синхр. 07:55', relative: 'Петрова Л. А., дочь',
+        hist: [['28.10 07:55', '152/94', 'w', 'Тонометр'], ['27.10 19:30', '148/92', 'w', 'Тонометр'], ['27.10 07:50', '146/90', 'w', 'Тонометр'], ['26.10 19:20', '138/86', '', 'Тонометр']] },
+      { id: 'leb', name: 'Лебедева Ольга Ивановна', meta: '49 л. · полис …7710', dx: 'dm', lvl: 'warn', value: '11,4', unit: 'ммоль/л', dev: '+1,4 выше 10,0', time: '05:30', target: '4,4–10,0 ммоль/л', device: 'нет, ввод вручную', relative: 'не указан',
+        hist: [['28.10 05:30', '11,4', 'w', 'Вручную'], ['27.10 22:00', '9,8', '', 'Вручную'], ['27.10 13:10', '10,2', 'w', 'Вручную'], ['27.10 07:40', '8,4', '', 'Вручную']] },
+      { id: 'fed', name: 'Фёдоров Виктор Павлович', meta: '75 л. · полис …2288', dx: 'dm', lvl: 'none', value: '6,8', unit: 'ммоль/л', dev: 'нет данных 3 дня', time: '25.10', target: '4,4–10,0 ммоль/л', device: 'Глюкометр, не синхр. с 25.10', relative: 'Фёдорова Н. В., жена',
+        hist: [['25.10 08:10', '6,8', '', 'Глюкометр'], ['24.10 08:05', '7,0', '', 'Глюкометр'], ['23.10 08:20', '6,6', '', 'Глюкометр']] },
+      { id: 'zah', name: 'Захаров Михаил Сергеевич', meta: '63 г. · полис …5126', dx: 'ah', lvl: 'ok', value: '128/82', unit: 'мм рт. ст.', dev: '—', time: '27.10', target: 'ниже 140/90 мм рт. ст.', device: 'Тонометр, синхр. 27.10', relative: 'не указан',
+        hist: [['27.10 20:14', '128/82', '', 'Тонометр'], ['27.10 08:00', '131/84', '', 'Тонометр'], ['26.10 20:05', '127/80', '', 'Тонометр']] },
+      { id: 'orl', name: 'Орлова Ксения Дмитриевна', meta: '29 л. · полис …6043', dx: 'ba', lvl: 'ok', value: '430', unit: 'л/мин', dev: '—', time: '27.10', target: 'ПСВ ≥ 80% (≥ 380 л/мин)', device: 'Пикфлоуметр, вручную', relative: 'не указан',
+        hist: [['27.10 09:40', '430', '', 'Вручную'], ['26.10 09:35', '427', '', 'Вручную'], ['25.10 09:30', '432', '', 'Вручную']] }
+    ];
+    var q = (s.q || '').toLowerCase();
+    var vis = P.filter(function (p) { return (s.dx === 'all' || p.dx === s.dx) && (!q || p.name.toLowerCase().indexOf(q) >= 0); });
+    var G = [['crit', 'Критично — требуется действие', '#B42318'], ['warn', 'Требуют внимания', '#D98A00'], ['none', 'Нет данных более 2 дней', null], ['ok', 'В пределах цели', null]];
+    var cols = 'display: grid; grid-template-columns: minmax(200px, 1.6fr) minmax(130px, 1fr) minmax(150px, 1fr) minmax(120px, 0.9fr) 80px minmax(160px, 1.1fr); gap: 12px; align-items: center; min-height: 48px; padding: 6px 16px 6px 13px; border-bottom: 1px solid #ECEEF1; ';
+    var groups = G.map(function (g) {
+      var rows = vis.filter(function (p) { return p.lvl === g[0]; }).map(function (p) {
+        var on = p.id === s.sel, acc = s.acc[p.id];
+        var alert = '—', alertStyle = 'color: #646E78';
+        if (p.lvl === 'crit') {
+          alert = acc ? 'Принят в ' + acc : 'Не принят · эскал. ' + p.esc;
+          alertStyle = acc ? 'color: #4A535D' : 'color: #B42318; font-weight: 600';
+        }
+        return Object.assign({}, p, {
+          dxName: DX[p.dx], alert: alert, alertStyle: alertStyle, pressed: on ? 'true' : 'false',
+          select: function () { self.setState({ sel: p.id }); },
+          rowStyle: cols + 'border-left: 3px solid ' + (on ? '#1D5FA8' : 'transparent') + '; background: ' + (on ? '#EEF4FB' : '#FFFFFF'),
+          valStyle: 'font-weight: 500; color: ' + (p.lvl === 'crit' ? '#B42318' : p.lvl === 'warn' ? '#8A4B00' : '#1B1F24'),
+          devStyle: 'font-size: 13px; color: ' + (p.lvl === 'crit' ? '#B42318' : p.lvl === 'warn' ? '#8A4B00' : '#646E78')
+        });
+      });
+      var open = !s.closed[g[0]];
+      return {
+        label: g[1], count: rows.length, rows: rows, open: open, expanded: open ? 'true' : 'false',
+        chev: 'flex-shrink: 0; transform: rotate(' + (open ? 90 : 0) + 'deg)',
+        dot: g[2] ? 'width: 8px; height: 8px; border-radius: 4px; background: ' + g[2] : 'width: 8px; height: 8px; border-radius: 4px; border: 1px solid #8A939D; box-sizing: border-box',
+        toggle: function () { var c = Object.assign({}, self.state.closed); c[g[0]] = open; self.setState({ closed: c }); }
+      };
+    }).filter(function (g) { return g.count > 0; });
+    var cur = P.filter(function (p) { return p.id === s.sel; })[0] || P[0];
+    var acc = s.acc[cur.id];
+    var hasAlert = cur.lvl === 'crit';
+    var p = Object.assign({}, cur, {
+      dxName: DX[cur.dx], hasAlert: hasAlert, pending: hasAlert && !acc, done: hasAlert && !!acc,
+      alertTitle: acc ? 'Алерт принят в ' + acc : 'Критический алерт · ' + cur.time,
+      alertText: acc ? 'Смирнова Е. А. · эскалация отменена' : 'Значение ' + cur.value + ' ' + cur.unit + '. Без реакции в ' + cur.esc + ' алерт уйдёт дежурному врачу.',
+      alertBox: 'display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; border-bottom: 1px solid #D9DDE2; ' + (acc ? 'background: #F6F7F8; color: #1B1F24' : 'background: #FDECEA; color: #7A1A12'),
+      accept: function () { var a = Object.assign({}, self.state.acc); a[cur.id] = a[cur.id] ? null : '10:42'; self.setState({ acc: a }); },
+      hist: cur.hist.map(function (h) {
+        return { t: h[0], v: h[1], src: h[3], style: 'padding: 6px 16px; border-bottom: 1px solid #ECEEF1; text-align: right; font-weight: 500; color: ' + (h[2] === 'c' ? '#B42318' : h[2] === 'w' ? '#8A4B00' : '#1B1F24') };
+      })
+    });
+    return {
+      q: s.q, dx: s.dx, groups: groups, empty: groups.length === 0, p: p,
+      onQ: function (e) { self.setState({ q: e.target.value }); },
+      onDx: function (e) { self.setState({ dx: e.target.value }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

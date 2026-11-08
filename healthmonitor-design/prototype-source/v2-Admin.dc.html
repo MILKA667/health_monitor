@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Администрирование</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F6F7F8}
+a{color:#1D5FA8}
+:focus-visible{outline:2px solid #1D5FA8;outline-offset:2px}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;border-radius:4px;border:1px solid #B9C0C8;background:#FFFFFF;color:#1B1F24;font:inherit;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#F0F2F4}
+.btn-primary{background:#1D5FA8;border-color:#1D5FA8;color:#FFFFFF}.btn-primary:hover{background:#164C87;border-color:#164C87}
+.btn:disabled{background:#F0F2F4;border-color:#D9DDE2;color:#8A939D;cursor:not-allowed}
+.lbtn{background:none;border:none;padding:0;font:inherit;font-size:13px;color:#1D5FA8;cursor:pointer;text-decoration:underline}
+.tab{height:44px;padding:0 4px;border:none;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#4A535D;cursor:pointer}
+.tab:hover{color:#1B1F24}
+.field{height:32px;box-sizing:border-box;padding:0 10px;border:1px solid #B9C0C8;border-radius:4px;background:#FFFFFF;font:inherit;font-size:14px;color:#1B1F24}
+th{text-align:left;font-weight:500;font-size:12px;line-height:16px;color:#646E78;padding:8px 16px;border-bottom:1px solid #D9DDE2;white-space:nowrap}
+td{padding:9px 16px;border-bottom:1px solid #ECEEF1;vertical-align:middle}
+@media (max-width:700px){.btn,.field{height:44px}}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F6F7F8; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #1B1F24; font-size: 14px; line-height: 20px">
+
+<header style="background: #FFFFFF; border-bottom: 1px solid #D9DDE2; padding: 0 24px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px">
+<span><span style="font-weight: 600; font-size: 15px">HealthMonitor</span> <span style="color: #4A535D">· Администрирование</span></span>
+<span style="font-size: 13px; color: #4A535D">Белова А. К. · администратор · <a href="v2-Login.dc.html">Выйти</a></span>
+</div>
+<div role="tablist" aria-label="Разделы администрирования" style="display: flex; flex-wrap: wrap; gap: 24px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+<button type="button" role="tab" class="tab" aria-selected="{{t.selected}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+</sc-for>
+</div>
+</header>
+
+<main style="padding: 16px 24px 32px; display: flex; flex-direction: column; gap: 12px">
+
+<sc-if value="{{isReq}}" hint-placeholder-val="{{ true }}">
+<p style="margin: 0; color: #4A535D">Доступ к данным пациентов открывается только после проверки документов врача и согласия пациента на доступ родственника.</p>
+<section aria-label="Заявки" style="background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; overflow-x: auto">
+<table style="width: 100%; min-width: 860px; border-collapse: collapse">
+<thead><tr><th scope="col">Заявитель</th><th scope="col">Роль</th><th scope="col">Подана</th><th scope="col">Документы</th><th scope="col" style="width: 260px">Решение</th></tr></thead>
+<tbody>
+<sc-for list="{{reqs}}" as="r" hint-placeholder-count="3">
+<tr>
+<td><span style="font-weight: 500">{{r.name}}</span><br><span style="font-size: 13px; color: #646E78">{{r.contact}}</span></td>
+<td>{{r.role}}</td>
+<td class="num">{{r.date}}</td>
+<td style="{{r.docStyle}}">{{r.docs}}</td>
+<td>
+<sc-if value="{{r.open}}" hint-placeholder-val="{{ true }}"><div style="display: flex; gap: 8px"><button type="button" class="btn btn-primary" onClick="{{r.approve}}" disabled="{{r.blocked}}">Одобрить</button><button type="button" class="btn" onClick="{{r.reject}}">Отклонить</button></div></sc-if>
+<sc-if value="{{r.decided}}" hint-placeholder-val="{{ false }}"><span style="{{r.resStyle}}">{{r.result}}</span> <button type="button" class="lbtn" onClick="{{r.undo}}">отменить</button></sc-if>
+</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</section>
+</sc-if>
+
+<sc-if value="{{isUsers}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+<label><span class="vh">Поиск пользователя</span><input class="field" type="search" placeholder="ФИО или e-mail" value="{{q}}" onChange="{{onQ}}" style="width: 240px"></label>
+<label><span class="vh">Роль</span><select class="field" value="{{role}}" onChange="{{onRole}}"><option value="all">Все роли</option><option value="Врач">Врачи</option><option value="Пациент">Пациенты</option><option value="Родственник">Родственники</option><option value="Администратор">Администраторы</option></select></label>
+<span style="margin-left: auto; color: #4A535D">Показано <span class="num">{{shown}}</span> из <span class="num">8</span></span>
+</div>
+<section aria-label="Пользователи" style="background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; overflow-x: auto">
+<table style="width: 100%; min-width: 860px; border-collapse: collapse">
+<thead><tr><th scope="col">Пользователь</th><th scope="col">Роль</th><th scope="col">Статус</th><th scope="col">Последний вход</th><th scope="col">Доступ</th></tr></thead>
+<tbody>
+<sc-for list="{{users}}" as="u" hint-placeholder-count="6">
+<tr>
+<td><span style="font-weight: 500">{{u.name}}</span><br><span style="font-size: 13px; color: #646E78">{{u.mail}}</span></td>
+<td>{{u.role}}</td>
+<td style="{{u.statusStyle}}">{{u.status}}</td>
+<td class="num" style="color: #4A535D">{{u.last}}</td>
+<td><button type="button" class="btn" onClick="{{u.toggle}}">{{u.action}}</button></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</section>
+</sc-if>
+
+<sc-if value="{{isAudit}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+<label><span class="vh">Тип события</span><select class="field" value="{{ev}}" onChange="{{onEv}}"><option value="all">Все события</option><option value="data">Доступ к медданным</option><option value="acc">Учётные записи и роли</option><option value="sec">Безопасность</option><option value="ntf">Уведомления</option></select></label>
+<span style="margin-left: auto; color: #4A535D">Журнал хранится 3 года; изменить или удалить записи нельзя</span>
+</div>
+<section aria-label="Журнал аудита" style="background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; overflow-x: auto">
+<table style="width: 100%; min-width: 900px; border-collapse: collapse; font-size: 13px">
+<thead><tr><th scope="col">Время</th><th scope="col">Кто</th><th scope="col">Действие</th><th scope="col">Объект</th><th scope="col">IP</th></tr></thead>
+<tbody>
+<sc-for list="{{audit}}" as="a" hint-placeholder-count="6">
+<tr><td class="num" style="white-space: nowrap">{{a.t}}</td><td>{{a.who}}</td><td style="{{a.style}}">{{a.what}}</td><td>{{a.obj}}</td><td class="num" style="color: #4A535D">{{a.ip}}</td></tr>
+</sc-for>
+</tbody>
+</table>
+</section>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":860}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'req', dec: {}, q: '', role: 'all', ev: 'all', blocked: { tih: true } };
+  }
+  renderVals() {
+    var self = this, s = this.state;
+    var reqDef = [
+      { id: 'gus', name: 'Гусев Роман Ильич', contact: 'r.gusev@clinic.ru', role: 'Врач-пульмонолог', date: '27.10.2026', docs: 'диплом, сертификат специалиста' },
+      { id: 'kov', name: 'Ковалёв Дмитрий Сергеевич', contact: '+7 ••• ••• 41 07', role: 'Родственник пациента', date: '26.10.2026', docs: 'согласие пациента Ковалёвой Н. П.' },
+      { id: 'sav', name: 'Савельева Марина Викторовна', contact: '+7 ••• ••• 77 30', role: 'Родственник пациента', date: '26.10.2026', docs: 'согласие пациента не получено', miss: true }
+    ];
+    var openCount = 0;
+    var reqs = reqDef.map(function (r) {
+      var d = s.dec[r.id];
+      if (!d) openCount++;
+      var set = function (v) { return function () { var m = Object.assign({}, self.state.dec); m[r.id] = v; self.setState({ dec: m }); }; };
+      return Object.assign({}, r, { open: !d, decided: !!d, blocked: !!r.miss, docStyle: r.miss ? 'color: #B42318; font-weight: 500' : '',
+        result: d === 'ok' ? 'Одобрено в 10:45' : 'Отклонено в 10:45',
+        resStyle: 'font-weight: 500; color: ' + (d === 'ok' ? '#1B1F24' : '#B42318'),
+        approve: set('ok'), reject: set('no'), undo: set(null) });
+    });
+    var tabs = [['req', 'Заявки' + (openCount ? ' · ' + openCount : '')], ['users', 'Пользователи'], ['audit', 'Журнал аудита']].map(function (t) {
+      var on = t[0] === s.tab;
+      return { label: t[1], selected: on ? 'true' : 'false', pick: function () { self.setState({ tab: t[0] }); }, style: on ? 'color: #1B1F24; font-weight: 600; border-bottom-color: #1D5FA8' : '' };
+    });
+    var U = [
+      { id: 'smi', name: 'Смирнова Елена Андреевна', mail: 'e.smirnova@clinic.ru', role: 'Врач', last: '28.10 10:41' },
+      { id: 'lis', name: 'Лисин Павел Романович', mail: 'p.lisin@clinic.ru', role: 'Врач', last: '28.10 09:20' },
+      { id: 'kova', name: 'Ковалёва Нина Петровна', mail: '+7 ••• ••• 18 52', role: 'Пациент', last: '28.10 10:38' },
+      { id: 'muh', name: 'Мухина Дарья Олеговна', mail: 'd.mukhina@mail.ru', role: 'Пациент', last: '28.10 09:41' },
+      { id: 'zah', name: 'Захаров Михаил Сергеевич', mail: 'm.zakharov@mail.ru', role: 'Пациент', last: '27.10 20:14' },
+      { id: 'tih', name: 'Тихонов Глеб Аркадьевич', mail: 'g.tikhonov@mail.ru', role: 'Пациент', last: '27.10 22:03' },
+      { id: 'pet', name: 'Петрова Людмила Алексеевна', mail: '+7 ••• ••• 05 61', role: 'Родственник', last: '25.10 18:12' },
+      { id: 'bel', name: 'Белова Анна Константиновна', mail: 'a.belova@clinic.ru', role: 'Администратор', last: '28.10 09:15' }
+    ];
+    var q = (s.q || '').toLowerCase();
+    var users = U.filter(function (u) { return (s.role === 'all' || u.role === s.role) && (!q || (u.name + ' ' + u.mail).toLowerCase().indexOf(q) >= 0); }).map(function (u) {
+      var b = !!s.blocked[u.id];
+      return Object.assign({}, u, { status: b ? 'Заблокирован' : 'Активен', statusStyle: b ? 'color: #B42318; font-weight: 500' : '',
+        action: b ? 'Разблокировать' : 'Заблокировать',
+        toggle: function () { var m = Object.assign({}, self.state.blocked); m[u.id] = !b; self.setState({ blocked: m }); } });
+    });
+    var A = [
+      ['28.10 10:41:07', 'Смирнова Е. А.', 'Открыта медкарта', 'Ковалёва Н. П.', '10.12.4.31', 'data'],
+      ['28.10 10:39:12', 'Система', 'SMS родственнику о критическом показателе', 'Ковалёв Д. С.', '—', 'ntf'],
+      ['28.10 10:38:40', 'Система', 'Создан критический алерт', 'Ковалёва Н. П., глюкоза 2,9', '—', 'ntf'],
+      ['28.10 09:15:33', 'Белова А. К.', 'Изменена роль: пациент → врач', 'Лисин П. Р.', '10.12.4.8', 'acc'],
+      ['27.10 22:03:18', 'Неизвестно', '5 неудачных попыток входа, учётная запись заблокирована', 'Тихонов Г. А.', '185.66.12.9', 'sec'],
+      ['27.10 18:30:02', 'Захаров М. С.', 'Подписано согласие на обработку данных о здоровье', 'Захаров М. С.', '91.204.7.110', 'acc'],
+      ['27.10 16:02:55', 'Лисин П. Р.', 'Выгружен отчёт по пациенту (PDF)', 'Петров А. В.', '10.12.4.19', 'data']
+    ];
+    var audit = A.filter(function (a) { return s.ev === 'all' || a[5] === s.ev; }).map(function (a) {
+      return { t: a[0], who: a[1], what: a[2], obj: a[3], ip: a[4], style: a[5] === 'sec' ? 'color: #B42318; font-weight: 500' : '' };
+    });
+    return {
+      tabs: tabs, isReq: s.tab === 'req', isUsers: s.tab === 'users', isAudit: s.tab === 'audit',
+      reqs: reqs, users: users, shown: users.length, audit: audit,
+      q: s.q, role: s.role, ev: s.ev,
+      onQ: function (e) { self.setState({ q: e.target.value }); },
+      onRole: function (e) { self.setState({ role: e.target.value }); },
+      onEv: function (e) { self.setState({ ev: e.target.value }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
