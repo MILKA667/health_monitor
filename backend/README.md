@@ -29,3 +29,14 @@ venv\Scripts\python app.py
 ## SMS
 
 Шлюза пока нет: сообщения (коды восстановления, уведомления) пишутся в таблицу `sms_outbox` и в лог сервера.
+
+## Тесты
+
+```
+venv\Scripts\pip install -r requirements-dev.txt
+venv\Scripts\python -m pytest
+```
+
+Тесты создают отдельную базу `health_monitor_test` (имя меняется через `TEST_DB_NAME`) и очищают её перед каждым тестом — рабочие данные не затрагиваются. В CI тесты идут на PostgreSQL 16 из GitHub Actions.
+
+Деплой — см. [`deploy/README.md`](../deploy/README.md).
