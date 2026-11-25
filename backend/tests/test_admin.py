@@ -20,6 +20,11 @@ def temp_password_from_sms(phone):
         return re.search(r'Временный пароль: ([A-Za-z0-9]+)', cur.fetchone()['text']).group(1)
 
 
+def kovalova_patient_id(client):
+    patients = client.get('/api/admin/applications').get_json()['patients']
+    return next(item['id'] for item in patients if item['label'] == 'Ковалёва Н. П.')
+
+
 def test_admin_requires_admin(client, demo):
     assert client.get('/api/admin/applications').status_code == 401
     login(client, 'doctor@demo.ru')
@@ -37,7 +42,7 @@ def test_applications_list(client, demo):
     assert apps['doctor']['roleLabel'] == 'Врач' and apps['doctor']['status'] == 'pending'
     assert apps['relative']['phoneMasked'] == '+7 ••• ••• 01 03'
     assert apps['patient']['consentGiven'] is True
-    assert [doctor['label'] for doctor in data['doctors']] == ['Орлов В. Н.', 'Смирнова Е. А.']
+    assert [doctor['label'] for doctor in data['doctors']] == ['Смирнова Е. А.']
     assert len(data['patients']) == 9
 
 
@@ -77,12 +82,13 @@ def test_approve_relative_and_doctor(client, make_client, demo):
     login(client, 'admin@demo.ru')
     apps = applications(client)
 
-    relative = client.post(f"/api/admin/applications/{apps['relative']['id']}/approve", json={'patientId': 4})
+    relative = client.post(f"/api/admin/applications/{apps['relative']['id']}/approve",
+                            json={'patientId': kovalova_patient_id(client)})
     assert relative.status_code == 200
     relative_id = relative.get_json()['userId']
     with db_cursor() as cur:
         cur.execute('SELECT patient_id FROM relative_links WHERE relative_id = %s', (relative_id,))
-        assert cur.fetchone()['patient_id'] == 4
+        assert cur.fetchone()['patient_id'] == kovalova_patient_id(client)
 
     relative_client = make_client()
     login(relative_client, '79010000103', temp_password_from_sms('79010000103'))
@@ -222,12 +228,13 @@ def test_delete_user(client, make_client, demo):
 def test_deleted_account_cannot_be_reapproved(client, demo):
     login(client, 'admin@demo.ru')
     app_id = applications(client)['relative']['id']
-    created = client.post(f'/api/admin/applications/{app_id}/approve', json={'patientId': 4})
+    patient_id = kovalova_patient_id(client)
+    created = client.post(f'/api/admin/applications/{app_id}/approve', json={'patientId': patient_id})
     assert created.status_code == 200
     user_id = created.get_json()['userId']
 
     assert client.post(f'/api/admin/users/{user_id}/delete').status_code == 200
     assert client.post(f'/api/admin/applications/{app_id}/revert').status_code == 200
-    response = client.post(f'/api/admin/applications/{app_id}/approve', json={'patientId': 4})
+    response = client.post(f'/api/admin/applications/{app_id}/approve', json={'patientId': patient_id})
     assert response.status_code == 409
     assert 'удалена' in response.get_json()['error']

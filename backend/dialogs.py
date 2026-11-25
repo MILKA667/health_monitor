@@ -13,8 +13,7 @@ DIALOGS_SQL = """
            (SELECT count(*) FROM messages m
              WHERE m.patient_id = p.user_id AND m.sender_id <> %s AND m.read_at IS NULL) AS unread,
            meas.value, meas.value2, meas.kind, meas.measured_at,
-           al.rule AS alert_rule, al.created_at AS alert_at, al.relative_sms_at, al.escalate_at,
-           COALESCE(al.escalated, FALSE) AS escalated,
+           al.rule AS alert_rule, al.created_at AS alert_at, al.relative_sms_at,
            am.kind AS alert_kind, am.value AS alert_value, am.value2 AS alert_value2
     FROM patients p
     JOIN users u ON u.id = p.user_id
@@ -28,8 +27,7 @@ DIALOGS_SQL = """
         SELECT * FROM measurements WHERE patient_id = p.user_id ORDER BY measured_at DESC LIMIT 1
     ) meas ON TRUE
     LEFT JOIN LATERAL (
-        SELECT a.*, COALESCE(a.accepted_at IS NULL AND a.escalate_at <= now(), FALSE) AS escalated
-        FROM alerts a
+        SELECT a.* FROM alerts a
         WHERE a.patient_id = p.user_id AND a.level = 'crit'
         ORDER BY a.created_at DESC LIMIT 1
     ) al ON TRUE
@@ -72,8 +70,6 @@ def dialogs():
                                     'value2': row['alert_value2']}) if row['alert_kind'] else None,
                 'unit': UNITS[row['alert_kind']] if row['alert_kind'] else None,
                 'relativeSmsAt': iso(row['relative_sms_at']),
-                'escalateAt': iso(row['escalate_at']),
-                'escalated': row['escalated'],
             }
         conversations.append({
             'patientId': row['user_id'],

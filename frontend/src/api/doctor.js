@@ -28,7 +28,7 @@ export function undoAlert(alertId) {
 
 // Медкарта: шапка, алерт, график, измерения и пороги за 7/14/30 дней.
 // → { id, name, sex, age, diagnosis, icdCode, policyTail, enrolledAt, consentAt, device, relative,
-//     alert, days, chart, stats, measurements, thresholds, escalationMinutes, lastMeasurementAt }
+//     alert, days, chart, stats, measurements, thresholds, lastMeasurementAt }
 export function getRecord(patientId, days) {
   return request(`/doctor/patients/${patientId}/record?days=${days}`)
 }
@@ -47,22 +47,22 @@ export function sendMessage(patientId, body) {
   return request(`/doctor/patients/${patientId}/messages`, { method: 'POST', body: { body } })
 }
 
-// → { alerts: [{ id, createdAt, level, rule, value, unit, relativeSmsAt, acceptedAt, acceptedBy, escalateAt, escalated }] }
+// → { alerts: [{ id, createdAt, level, rule, value, unit, relativeSmsAt, acceptedAt, acceptedBy }] }
 export function getPatientAlerts(patientId) {
   return request(`/doctor/patients/${patientId}/alerts`)
 }
 
-// Общий список алертов врача (дежурный видит и эскалированные чужие).
-// → { counts: { open, closed, all }, dutyDoctor, alerts: [{ id, patientId, patientName, diagnosis, level,
-//     value, unit, rule, createdAt, relativeName, relativeSmsAt, acceptedAt, acceptedBy, escalateAt,
-//     escalated, own, canAccept, canUndo }] }
+// Общий список алертов лечащего врача.
+// → { counts: { open, closed, all }, alerts: [{ id, patientId, patientName, diagnosis, level,
+//     value, unit, rule, createdAt, relativeName, relativeSmsAt, acceptedAt, acceptedBy,
+//     own, canAccept, canUndo }] }
 export function getAlerts() {
   return request('/doctor/alerts')
 }
 
 // Пороги и правила эскалации. scope: { type: 'patient' | 'nosology', id } или null — тогда первый пациент.
 // → { scope, rows: [{ metric, label, unit, values: { crit_low, warn_low, warn_high, crit_high } }],
-//     settings: { escalationMinutes, smsRelative, noDataAlert }, scopes: { patients, nosologies } }
+//     settings: { smsRelative, noDataAlert }, scopes: { patients, nosologies } }
 export function getThresholds(scope) {
   const query = scope ? `?scope=${scope.type}&id=${encodeURIComponent(scope.id)}` : ''
   return request(`/doctor/thresholds${query}`)

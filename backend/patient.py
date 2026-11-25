@@ -565,7 +565,6 @@ def add_measurement():
             'level': alert['level'],
             'rule': alert['rule'],
             'createdAt': iso(alert['created_at']),
-            'escalateAt': iso(alert['escalate_at']),
         },
     }), 201
 
@@ -723,9 +722,6 @@ def latest_alert():
         'rule': alert['rule'],
         'threshold': threshold_text(alert['kind'], thresholds, patient),
         'createdAt': iso(alert['created_at']),
-        'escalateAt': iso(alert['escalate_at']),
-        'escalated': alert['accepted_at'] is None and alert['escalate_at'] is not None
-        and alert['escalate_at'] <= datetime.now(timezone.utc),
         'doctor': {'name': short_name(doctor['name'])} if doctor else None,
         'relative': relative,
         'relativeSmsAt': iso(alert['relative_sms_at']),

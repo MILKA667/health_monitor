@@ -30,22 +30,17 @@ function notifiedText(alert) {
   return `врач${sms}`
 }
 
-function escalationText(alert, dutyDoctor) {
+function escalationText(alert) {
   if (alert.acceptedAt) {
     const waited = minutesBetween(alert.createdAt, alert.acceptedAt)
     return `принят${waited > 0 ? ` через ${waited} мин` : ''} · ${alert.acceptedBy}`
   }
-  if (alert.level !== 'crit' || !alert.escalateAt) return 'не применяется'
-  if (alert.escalated) {
-    return `эскалирован ${formatTime(alert.escalateAt)}${dutyDoctor ? ` · дежурный ${dutyDoctor}` : ''}`
-  }
-  return `ожидает · в ${formatTime(alert.escalateAt)}`
+  return alert.level === 'crit' ? 'ожидает' : '—'
 }
 
-function escalationTone(alert) {
+function reactionTone(alert) {
   if (alert.acceptedAt) return 'done'
-  if (alert.level !== 'crit') return 'none'
-  return alert.escalated ? 'over' : 'pending'
+  return alert.level === 'crit' ? 'pending' : 'none'
 }
 
 // Все алерты: открытые, закрытые и все, с фильтром уровня
@@ -91,7 +86,7 @@ function Alerts() {
     )
   }
 
-  const { counts, dutyDoctor } = data
+  const { counts } = data
   const tabs = [
     { id: 'open', label: `Открытые · ${counts.open}` },
     { id: 'closed', label: `Закрытые · ${counts.closed}` },
@@ -107,7 +102,7 @@ function Alerts() {
       <div className="alerts-head">
         <div className="alerts-head__title">
           <h1>Алерты</h1>
-          <span className="text-2">Без реакции 15 минут критический алерт уходит дежурному врачу</span>
+          <span className="text-2">Критичные алерты приходят лечащему врачу пациента</span>
         </div>
         <TextTabs tabs={tabs} value={tab} onChange={setTab} label="Состояние" />
         <label className="alerts-head__filter">
@@ -131,7 +126,7 @@ function Alerts() {
                 <span>Значение</span>
                 <span>Правило</span>
                 <span>Уведомлены</span>
-                <span>Эскалация</span>
+                <span>Реакция</span>
                 <span>Действие</span>
               </div>
               {rows.map((alert) => {
@@ -163,8 +158,8 @@ function Alerts() {
                     </span>
                     <span className="text-2">{alert.rule}</span>
                     <span className="text-2">{notifiedText(alert)}</span>
-                    <span className={`alerts__escalation alerts__escalation--${escalationTone(alert)}`}>
-                      {escalationText(alert, dutyDoctor)}
+                    <span className={`alerts__escalation alerts__reaction--${reactionTone(alert)}`}>
+                      {escalationText(alert)}
                     </span>
                     <span className="alerts__action">
                       {alert.canAccept && (
@@ -187,8 +182,8 @@ function Alerts() {
           </div>
         </section>
         <p className="alerts__note text-2">
-          Критично — врач и родственник (при согласии пациента) уведомляются сразу; внимание — только врач, без
-          эскалации. Пороги настраиваются в разделе <Link to="/doctor/thresholds">«Пороги»</Link>.
+          Критично — врач и родственник (при согласии пациента) уведомляются сразу; внимание — только врач.
+          Пороги настраиваются в разделе <Link to="/doctor/thresholds">«Пороги»</Link>.
         </p>
       </div>
     </main>

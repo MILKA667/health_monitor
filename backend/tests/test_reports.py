@@ -1,9 +1,12 @@
-from helpers import login
+from helpers import create_doctor, login
 
 from db import db_cursor
 
-PATIENT = {'kind': 'patient', 'patientId': 4, 'days': 14,
-           'sections': ['dynamics', 'alerts', 'meds', 'messages']}
+def patient_payload(client):
+    patients = client.get('/api/doctor/reports').get_json()['options']['patients']
+    patient_id = next(item['id'] for item in patients if item['label'] == 'Ковалёва Н. П.')
+    return {'kind': 'patient', 'patientId': patient_id, 'days': 14,
+            'sections': ['dynamics', 'alerts', 'meds', 'messages']}
 
 
 def create(client, **payload):
@@ -12,7 +15,7 @@ def create(client, **payload):
 
 def test_create_patient_report(client, demo):
     login(client, 'doctor@demo.ru')
-    response = create(client, **PATIENT)
+    response = create(client, **patient_payload(client))
     assert response.status_code == 201
     report = response.get_json()
     assert report['title'] == 'По пациенту · Ковалёва Н. П.'
@@ -40,11 +43,12 @@ def test_create_patient_report(client, demo):
 
 def test_report_validation(client, demo):
     login(client, 'doctor@demo.ru')
-    assert 'раздел' in create(client, **{**PATIENT, 'sections': []}).get_json()['error']
-    assert 'тип' in create(client, **{**PATIENT, 'kind': 'other'}).get_json()['error']
-    assert 'Период' in create(client, **{**PATIENT, 'days': 7}).get_json()['error']
-    assert 'Выберите пациента' in create(client, **{**PATIENT, 'patientId': None}).get_json()['error']
-    assert create(client, **{**PATIENT, 'patientId': 999}).status_code == 404
+    payload = patient_payload(client)
+    assert 'раздел' in create(client, **{**payload, 'sections': []}).get_json()['error']
+    assert 'тип' in create(client, **{**payload, 'kind': 'other'}).get_json()['error']
+    assert 'Период' in create(client, **{**payload, 'days': 7}).get_json()['error']
+    assert 'Выберите пациента' in create(client, **{**payload, 'patientId': None}).get_json()['error']
+    assert create(client, **{**payload, 'patientId': 999}).status_code == 404
 
 
 def test_group_report_filters_nosology(client, demo):
@@ -70,16 +74,14 @@ def test_response_report(client, demo):
     report = create(client, kind='response', days=90, sections=['alerts']).get_json()
     response = client.get(f"/api/doctor/reports/{report['id']}").get_json()['response']
 
-    assert response['summary'] == {'total': 15, 'crit': 5, 'escalated': 1, 'accepted': 10,
-                                   'avgResponseMinutes': 17}
+    assert response['summary'] == {'total': 15, 'crit': 5, 'accepted': 10, 'avgResponseMinutes': 17}
     assert response['rows'][0]['patientName'] == 'Ковалёва Нина Петровна'
     assert response['rows'][0]['responseMinutes'] is None
-    assert any(row['escalated'] for row in response['rows'])
 
 
-def test_reports_list_and_access(client, demo):
+def test_reports_list_and_access(client, make_client, demo):
     login(client, 'doctor@demo.ru')
-    first = create(client, **PATIENT).get_json()
+    first = create(client, **patient_payload(client)).get_json()
     create(client, kind='response', days=14, sections=['alerts'])
     listing = client.get('/api/doctor/reports').get_json()
     assert [report['title'] for report in listing['reports']] == [
@@ -87,6 +89,7 @@ def test_reports_list_and_access(client, demo):
     assert len(listing['options']['patients']) == 9
     assert listing['options']['periods'] == [14, 30, 90]
 
-    login(client, 'duty@demo.ru')
-    assert client.get(f"/api/doctor/reports/{first['id']}").status_code == 404
-    assert client.get('/api/doctor/reports').get_json()['reports'] == []
+    other = make_client()
+    create_doctor(other)
+    assert other.get(f"/api/doctor/reports/{first['id']}").status_code == 404
+    assert other.get('/api/doctor/reports').get_json()['reports'] == []

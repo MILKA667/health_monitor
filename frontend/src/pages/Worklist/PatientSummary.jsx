@@ -25,8 +25,7 @@ function alertText(alert, measurement) {
     const comment = alert.comment ? ` «${alert.comment}»` : ''
     return `${value} Принят в ${formatTime(alert.acceptedAt)} · ${alert.acceptedBy}.${comment}`
   }
-  if (alert.escalated) return `${value} Без реакции — передан дежурному врачу в ${formatTime(alert.escalateAt)}.`
-  return `${value} Без реакции в ${formatTime(alert.escalateAt)} алерт уйдёт дежурному врачу.`
+  return `${value} Врач уведомлён.`
 }
 
 // Сводка по выбранному пациенту справа от рабочего списка

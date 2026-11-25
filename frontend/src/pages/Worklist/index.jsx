@@ -18,12 +18,11 @@ const GROUPS = [
 
 const REFRESH_MS = 60000
 
-// Состояние критического алерта в строке списка
+// Состояние алерта в строке списка
 function alertState(alert) {
   if (!alert) return { text: '—' }
   if (alert.acceptedAt) return { text: `Принят в ${formatTime(alert.acceptedAt)}` }
-  if (alert.escalated) return { text: `Эскалирован в ${formatTime(alert.escalateAt)}`, tone: 'over' }
-  return { text: `Не принят · эскал. ${formatTime(alert.escalateAt)}`, tone: 'pending' }
+  return { text: 'Не принят', tone: 'pending' }
 }
 
 function deviationText(patient) {

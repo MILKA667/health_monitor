@@ -1,4 +1,4 @@
-from helpers import login
+from helpers import create_doctor, login
 
 from db import db_cursor
 
@@ -25,25 +25,32 @@ def test_dialogs_list(client, demo):
     assert kovaleva['lastMeasurement']['unit'] == 'ммоль/л'
     assert kovaleva['lastMeasurement']['level'] == 'crit'
     assert kovaleva['alert']['value'] == '2,9' and kovaleva['alert']['relativeSmsAt']
-    assert kovaleva['alert']['escalated'] is False
+    assert kovaleva['alert']['relativeSmsAt'] is not None
 
     with db_cursor() as cur:
         cur.execute("SELECT count(*) AS n FROM audit_log WHERE action = 'messages_viewed'")
         assert cur.fetchone()['n'] == 1
 
 
+def kovalova_id(client):
+    patients = client.get('/api/doctor/worklist').get_json()['patients']
+    return next(patient['id'] for patient in patients if patient['name'] == 'Ковалёва Нина Петровна')
+
+
 def test_opening_dialog_marks_read(client, demo):
     login(client, 'doctor@demo.ru')
     assert conversations(client)[0]['unread'] == 1
 
-    client.get('/api/doctor/patients/4/messages')
+    client.get(f'/api/doctor/patients/{kovalova_id(client)}/messages')
     assert conversations(client)[0]['unread'] == 0
 
 
 def test_patient_reply_moves_dialog_and_counts_unread(client, demo):
     login(client, 'doctor@demo.ru')
+    patient_id = kovalova_id(client)
     with db_cursor() as cur:
-        cur.execute("INSERT INTO messages (patient_id, sender_id, body) VALUES (4, 4, 'Ещё раз замерила, 4,1.')")
+        cur.execute('INSERT INTO messages (patient_id, sender_id, body) VALUES (%s, %s, %s)',
+                    (patient_id, patient_id, 'Ещё раз замерила, 4,1.'))
 
     item = conversations(client)[0]
     assert item['unread'] == 2
@@ -53,7 +60,8 @@ def test_patient_reply_moves_dialog_and_counts_unread(client, demo):
 
 def test_doctor_sent_message_becomes_last(client, demo):
     login(client, 'doctor@demo.ru')
-    assert client.post('/api/doctor/patients/4/messages',
+    patient_id = kovalova_id(client)
+    assert client.post(f'/api/doctor/patients/{patient_id}/messages',
                        json={'body': 'Повторите замер через 15 минут.'}).status_code == 201
 
     item = conversations(client)[0]
@@ -61,10 +69,11 @@ def test_doctor_sent_message_becomes_last(client, demo):
     assert item['lastMessage']['mine'] is True
 
 
-def test_dialogs_show_only_own_patients_and_require_doctor(client, demo):
+def test_dialogs_show_only_own_patients_and_require_doctor(client, make_client, demo):
     assert client.get('/api/doctor/messages').status_code == 401
     login(client, '+79000000102')
     assert client.get('/api/doctor/messages').status_code == 403
 
-    login(client, 'duty@demo.ru')
-    assert conversations(client) == []
+    other = make_client()
+    create_doctor(other)
+    assert other.get('/api/doctor/messages').get_json()['conversations'] == []

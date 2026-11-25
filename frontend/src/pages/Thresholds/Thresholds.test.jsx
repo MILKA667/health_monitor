@@ -39,7 +39,7 @@ const DATA = {
       values: { crit_low: '50', warn_low: '80', warn_high: null, crit_high: null },
     },
   ],
-  settings: { escalationMinutes: 15, smsRelative: true, noDataAlert: true },
+  settings: { smsRelative: true, noDataAlert: true },
   scopes: {
     patients: [{ type: 'patient', id: 4, label: 'Пациент: Ковалёва Н. П.' }],
     nosologies: [{ type: 'nosology', id: 'diabetes', label: 'Шаблон: сахарный диабет' }],
@@ -85,12 +85,12 @@ describe('Thresholds', () => {
     renderThresholds()
 
     await screen.findByLabelText('Глюкоза крови: критично ниже')
-    await userEvent.selectOptions(screen.getByLabelText('Передать дежурному врачу без реакции через'), '10')
+    await userEvent.click(await screen.findByRole('checkbox', { name: /SMS родственнику/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
 
     expect(api.saveThresholds).toHaveBeenCalledWith(expect.objectContaining({
       scope: DATA.scope,
-      settings: { escalationMinutes: 10, smsRelative: true, noDataAlert: true },
+      settings: { smsRelative: false, noDataAlert: true },
     }))
     expect(api.saveThresholds.mock.calls[0][0].rows[0]).toEqual({
       metric: 'glucose', critLow: '3,9', warnLow: '4,4', warnHigh: '10,0', critHigh: '13,9',

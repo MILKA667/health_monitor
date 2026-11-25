@@ -70,8 +70,6 @@ def home():
         contact = cur.fetchone()
         audit(cur, 'relative_viewed', user['id'], f"patient:{patient['user_id']}", request.remote_addr)
 
-    escalated = (alert and alert['accepted_at'] is None and alert['escalate_at'] is not None
-                 and alert['escalate_at'] <= datetime.now(timezone.utc))
     return jsonify({
         'viewer': {'name': short_name(user['name'])},
         'patient': {
@@ -89,9 +87,7 @@ def home():
             'createdAt': iso(alert['created_at']),
             'acceptedAt': iso(alert['accepted_at']),
             'acceptedBy': short_name(alert['accepted_by_name']) if alert['accepted_by_name'] else None,
-            'escalateAt': iso(alert['escalate_at']),
             'relativeSmsAt': iso(alert['relative_sms_at']),
-            'escalated': escalated,
         },
         'measurements': [{
             'id': row['id'],
