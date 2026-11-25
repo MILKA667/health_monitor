@@ -59,3 +59,16 @@ export function getPatientAlerts(patientId) {
 export function getAlerts() {
   return request('/doctor/alerts')
 }
+
+// Пороги и правила эскалации. scope: { type: 'patient' | 'nosology', id } или null — тогда первый пациент.
+// → { scope, rows: [{ metric, label, unit, values: { crit_low, warn_low, warn_high, crit_high } }],
+//     settings: { escalationMinutes, smsRelative, noDataAlert }, scopes: { patients, nosologies } }
+export function getThresholds(scope) {
+  const query = scope ? `?scope=${scope.type}&id=${encodeURIComponent(scope.id)}` : ''
+  return request(`/doctor/thresholds${query}`)
+}
+
+// payload: { scope, rows: [{ metric, critLow, warnLow, warnHigh, critHigh }], settings }
+export function saveThresholds(payload) {
+  return request('/doctor/thresholds', { method: 'POST', body: payload })
+}

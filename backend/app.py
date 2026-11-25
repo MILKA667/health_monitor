@@ -12,6 +12,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import auth
 import doctor
 import seed
+import thresholds
 import welcome
 from db import apply_schema, get_db_connection
 
@@ -35,6 +36,7 @@ CORS(app, supports_credentials=True, origins=os.environ.get('FRONTEND_ORIGIN', '
 app.register_blueprint(auth.bp)
 app.register_blueprint(welcome.bp)
 app.register_blueprint(doctor.bp)
+app.register_blueprint(thresholds.bp)
 app.cli.add_command(seed.seed_demo)
 
 
