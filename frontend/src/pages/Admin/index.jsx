@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import {
   approveApplication,
   deleteUser,
@@ -204,7 +204,8 @@ function Admin() {
         <span className="admin-header__brand">HealthMonitor</span>
         <TextTabs tabs={tabs} value={tab} onChange={setTab} label="Разделы админки" />
         <span className="admin-header__user">
-          {me.shortName} · <button type="button" className="admin-header__logout" onClick={handleLogout}>Выйти</button>
+          {me.shortName} · <Link to="/telegram">Telegram</Link> ·{' '}
+          <button type="button" className="admin-header__logout" onClick={handleLogout}>Выйти</button>
         </span>
       </header>
 

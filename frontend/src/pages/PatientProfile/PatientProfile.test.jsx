@@ -49,20 +49,20 @@ describe('PatientProfile', () => {
     expect(screen.getByRole('link', { name: 'Сменить' })).toHaveAttribute('href', '/patient/password')
   })
 
-  it('выключает SMS-канал', async () => {
+  it('выключает канал Telegram', async () => {
     api.updateProfile.mockResolvedValue({ ...PROFILE, channels: { push: true, sms: false } })
     renderProfile()
 
-    await userEvent.click(await screen.findByRole('checkbox', { name: 'SMS' }))
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Telegram' }))
     expect(api.updateProfile).toHaveBeenCalledWith({ sms: false })
-    expect(screen.getByRole('checkbox', { name: 'SMS' })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Telegram' })).not.toBeChecked()
   })
 
   it('возвращает переключатель и показывает ошибку, если сервер отклонил', async () => {
     api.updateProfile.mockRejectedValue(new ApiError('Выберите хотя бы один способ, иначе напоминания не придут.', 400))
     renderProfile()
 
-    const sms = await screen.findByRole('checkbox', { name: 'SMS' })
+    const sms = await screen.findByRole('checkbox', { name: 'Telegram' })
     await userEvent.click(sms)
     expect(await screen.findByRole('alert')).toHaveTextContent('Выберите хотя бы один способ')
     expect(sms).toBeChecked()

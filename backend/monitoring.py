@@ -1,8 +1,7 @@
 """Пороги, оценка измерений и алерты — общая логика для врача, пациента и родственника."""
 from decimal import Decimal
 
-from security import short_name
-from sms import send_sms
+from notifications import notify
 
 NOSOLOGY_NAMES = {
     'diabetes': 'Сахарный диабет',
@@ -149,6 +148,11 @@ def record_measurement(cur, patient, kind, value, value2=None, source='manual', 
     )
     alert = cur.fetchone()
 
+    patient_name = patient.get('name') or 'Пациент'
+    # Лечащий врач получает алерт в Telegram, если привязал его
+    notify(cur, f'HealthMonitor: {patient_name} — {fmt_value(measurement)} {UNITS[kind]}. '
+                f'{rule}. Откройте раздел «Алерты».', user_id=patient['doctor_id'])
+
     if level == 'crit' and settings['sms_relative']:
         cur.execute(
             """SELECT c.phone, u.name FROM patient_contacts c JOIN users u ON u.id = c.patient_id
@@ -156,10 +160,9 @@ def record_measurement(cur, patient, kind, value, value2=None, source='manual', 
             (patient['user_id'],),
         )
         contact = cur.fetchone()
-        if contact:
-            send_sms(cur, contact['phone'],
-                     f"HealthMonitor: {short_name(contact['name'])} — критичное значение {fmt_value(measurement)} "
-                     f"{UNITS[kind]}, врач уже получил уведомление.")
+        if contact and notify(cur, f'HealthMonitor: {patient_name} — критичное значение '
+                                   f'{fmt_value(measurement)} {UNITS[kind]}, врач уже получил уведомление.',
+                              phone=contact['phone']):
             # Для измерений из прошлого (синхронизация устройства, демо-данные) — минута после замера
             cur.execute(
                 "UPDATE alerts SET relative_sms_at = LEAST(now(), created_at + interval '1 minute') WHERE id = %s RETURNING *",

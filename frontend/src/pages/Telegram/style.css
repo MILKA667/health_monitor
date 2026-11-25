@@ -1,0 +1,52 @@
+.telegram-page {
+  gap: var(--s-4);
+}
+
+.telegram-page__back {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-h-touch);
+  color: var(--primary);
+  font-size: var(--tm-body);
+  text-decoration: none;
+}
+
+.telegram-page__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+}
+
+.telegram-page__title,
+.telegram-page__linked {
+  font-weight: 600;
+}
+
+.telegram-page__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.telegram-page__code {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--border);
+}
+
+.telegram-page__code-value {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 4px;
+}
+
+.telegram-page__code .btn {
+  width: 100%;
+  text-align: center;
+}

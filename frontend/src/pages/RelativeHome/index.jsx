@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { getRelativeHome, setRelativePush } from '../../api/relative'
 import { logout } from '../../api/auth'
 import FormError from '../../components/FormError'
@@ -21,7 +21,7 @@ function when(iso) {
 
 function timeline(alert) {
   const events = [{ time: alert.createdAt, text: 'Врач получил уведомление' }]
-  if (alert.relativeSmsAt) events.push({ time: alert.relativeSmsAt, text: 'Вам отправлено SMS' })
+  if (alert.relativeSmsAt) events.push({ time: alert.relativeSmsAt, text: 'Вам отправлено сообщение в Telegram' })
   if (alert.acceptedAt) {
     events.push({ time: alert.acceptedAt, text: `Врач ${alert.acceptedBy} — алерт принят` })
   } else {
@@ -83,7 +83,7 @@ function RelativeHome() {
       <div className="relative-topbar">
         <span className="relative-topbar__brand">HealthMonitor</span>
         <span>
-          {data.viewer.name} ·{' '}
+          {data.viewer.name} · <Link to="/telegram">Telegram</Link> ·{' '}
           <button type="button" className="relative-topbar__logout" onClick={handleLogout}>Выйти</button>
         </span>
       </div>
@@ -142,7 +142,7 @@ function RelativeHome() {
         <label className="relative-item">
           <span className="relative-item__text">
             <span>Push при критичном значении</span>
-            <span className="patient-hint">SMS приходят всегда</span>
+            <span className="patient-hint">Уведомления в Telegram приходят всегда</span>
           </span>
           <input
             type="checkbox"

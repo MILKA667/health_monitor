@@ -25,7 +25,7 @@ function relativeLabel(name) {
 function notifiedText(alert) {
   if (alert.level !== 'crit') return 'врач'
   const sms = alert.relativeSmsAt && alert.relativeName
-    ? `; ${relativeLabel(alert.relativeName)} — SMS ${formatTime(alert.relativeSmsAt)}`
+    ? `; ${relativeLabel(alert.relativeName)} — Telegram ${formatTime(alert.relativeSmsAt)}`
     : ''
   return `врач${sms}`
 }

@@ -14,12 +14,6 @@ def applications(client):
     return {item['role']: item for item in response.get_json()['applications']}
 
 
-def temp_password_from_sms(phone):
-    with db_cursor() as cur:
-        cur.execute('SELECT text FROM sms_outbox WHERE phone = %s ORDER BY id DESC LIMIT 1', (phone,))
-        return re.search(r'Временный пароль: ([A-Za-z0-9]+)', cur.fetchone()['text']).group(1)
-
-
 def kovalova_patient_id(client):
     patients = client.get('/api/admin/applications').get_json()['patients']
     return next(item['id'] for item in patients if item['label'] == 'Ковалёва Н. П.')
@@ -65,7 +59,8 @@ def test_approve_patient_creates_account_and_card(client, make_client, demo):
         application = cur.fetchone()
         assert (application['status'], application['approved_user_id']) == ('approved', user_id)
 
-    password = temp_password_from_sms('79000000777')
+    password = response.get_json()['tempPassword']
+    assert re.fullmatch(r'[A-Za-z0-9]{10}', password)
     patient = make_client()
     assert login(patient, '79000000777', password)['mustChangePassword'] is True
 
@@ -91,7 +86,7 @@ def test_approve_relative_and_doctor(client, make_client, demo):
         assert cur.fetchone()['patient_id'] == kovalova_patient_id(client)
 
     relative_client = make_client()
-    login(relative_client, '79010000103', temp_password_from_sms('79010000103'))
+    login(relative_client, '79010000103', relative.get_json()['tempPassword'])
     assert relative_client.get('/api/relative/home').get_json()['patient']['name'] == 'Ковалёва Нина Петровна'
 
     doctor = client.post(f"/api/admin/applications/{apps['doctor']['id']}/approve",

@@ -4,9 +4,9 @@ from flask import Blueprint, jsonify, request
 
 from auth import set_password
 from db import audit, db_cursor
+from notifications import notify
 from security import (current_user, error, login_required, mask_phone, normalize_phone, password_problem,
                       short_name, start_session)
-from sms import send_sms
 
 bp = Blueprint('welcome', __name__, url_prefix='/api/welcome')
 
@@ -91,9 +91,9 @@ def complete():
                    ON CONFLICT (patient_id) DO UPDATE SET name = EXCLUDED.name, phone = EXCLUDED.phone, sms_alerts = TRUE""",
                 (user['id'], relative_name, relative_phone),
             )
-            send_sms(cur, relative_phone,
-                     f'HealthMonitor: {short_name(user["name"])} указал(а) вас близким. '
-                     'Вы будете получать SMS, если показатель выйдет за критический порог.')
+            notify(cur, f'HealthMonitor: {short_name(user["name"])} указал(а) вас близким. '
+                        'Вы будете получать уведомления, если показатель выйдет за критический порог.',
+                   phone=relative_phone)
         audit(cur, 'first_login_completed', user['id'], f'patient:{user["id"]}', request.remote_addr)
 
     # Пароль сменён — текущий сеанс продолжаем с новой версией
