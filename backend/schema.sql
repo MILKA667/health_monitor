@@ -222,3 +222,16 @@ CREATE TABLE IF NOT EXISTS messages (
     read_at     TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS messages_patient_time ON messages (patient_id, created_at);
+
+-- Сформированные отчёты врача: параметры сохраняются, печатная версия собирается по запросу
+CREATE TABLE IF NOT EXISTS reports (
+    id          SERIAL PRIMARY KEY,
+    doctor_id   INTEGER NOT NULL REFERENCES users (id),
+    kind        TEXT NOT NULL CHECK (kind IN ('patient', 'group', 'response')),
+    patient_id  INTEGER REFERENCES patients (user_id),
+    nosology    TEXT CHECK (nosology IN ('all', 'diabetes', 'hypertension', 'asthma')),
+    days        INTEGER NOT NULL,
+    sections    TEXT[] NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS reports_doctor_time ON reports (doctor_id, created_at DESC);

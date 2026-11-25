@@ -1,0 +1,145 @@
+.reports__loading {
+  padding: var(--s-6) var(--page-x);
+}
+
+.reports-head {
+  padding: var(--s-4) var(--page-x) var(--s-3);
+}
+
+.reports-head h1 {
+  font: var(--t-page);
+}
+
+.reports-body {
+  padding: 0 var(--page-x) var(--s-8);
+}
+
+.reports-body .form-error {
+  padding-bottom: var(--s-3);
+}
+
+.reports__layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--s-4);
+}
+
+/* Форма */
+.reports__form {
+  display: flex;
+  flex: 1 1 360px;
+  flex-direction: column;
+  gap: var(--s-4);
+  max-width: 440px;
+  padding: var(--s-4);
+}
+
+.reports__form h2 {
+  font: var(--t-section);
+}
+
+.reports__label {
+  display: block;
+  margin-bottom: var(--s-1);
+  padding: 0;
+  font: var(--t-caption);
+  font-weight: 500;
+}
+
+.reports__group {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.reports__field {
+  display: flex;
+  flex-direction: column;
+}
+
+.reports__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+
+.reports__check input {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--primary);
+}
+
+.reports__check-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.reports__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--border-row);
+}
+
+.reports__actions .btn {
+  align-self: flex-start;
+}
+
+.reports__hint {
+  font-size: 12px;
+}
+
+/* Список отчётов */
+.reports__ready {
+  flex: 999 1 560px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.reports__ready h2 {
+  padding: var(--s-4) var(--s-4) var(--s-2);
+  font: var(--t-section);
+}
+
+.reports__scroll {
+  overflow-x: auto;
+}
+
+.reports__ready .data-table {
+  min-width: 620px;
+}
+
+.reports__name {
+  font-weight: 500;
+}
+
+.reports__name a {
+  color: var(--text);
+}
+
+.reports__name a:hover {
+  color: var(--primary);
+}
+
+.reports__file {
+  text-align: right;
+  font-size: 12px;
+}
+
+.reports__empty {
+  padding: var(--s-4);
+}
+
+@media (max-width: 700px) {
+  .reports-head,
+  .reports-body {
+    padding-right: var(--page-x-mobile);
+    padding-left: var(--page-x-mobile);
+  }
+}

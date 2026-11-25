@@ -79,3 +79,20 @@ export function saveThresholds(payload) {
 export function getConversations() {
   return request('/doctor/messages')
 }
+
+// Отчёты: список и форма.
+// → { reports: [{ id, kind, title, days, sections, createdAt, periodText }],
+//     options: { kinds, periods, sections, patients: [{ id, label }], nosologies: [{ id, label }] } }
+export function getReports() {
+  return request('/doctor/reports')
+}
+
+// payload: { kind: 'patient'|'group'|'response', days, patientId?, nosology?, sections: ['dynamics', ...] }
+export function createReport(payload) {
+  return request('/doctor/reports', { method: 'POST', body: payload })
+}
+
+// Печатная версия отчёта: шапка, разделы пациента, сводка по группе или реакция на алерты
+export function getReport(reportId) {
+  return request(`/doctor/reports/${reportId}`)
+}
