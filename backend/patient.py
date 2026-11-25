@@ -1,5 +1,6 @@
 """Экраны пациента: главная с планом на сегодня, ввод показателя и алерт."""
 from datetime import date, datetime, timezone
+import re
 
 from flask import Blueprint, jsonify, request
 
@@ -53,7 +54,7 @@ def plan_items(cur, patient):
     cur.execute(
         """SELECT s.id, s.time_of_day, s.dose, m.name FROM medication_slots s
            JOIN medications m ON m.id = s.medication_id
-           WHERE m.patient_id = %s AND m.enabled
+           WHERE m.patient_id = %s AND m.enabled AND s.enabled
            ORDER BY s.time_of_day""",
         (patient['user_id'],),
     )
@@ -155,6 +156,118 @@ def toggle_intake(slot_id):
                         (slot_id, date.today()))
         audit(cur, 'medication_intake', patient['user_id'], f'slot:{slot_id}', request.remote_addr)
     return jsonify({'done': done})
+
+
+REMINDER_TIME = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$')
+
+
+@bp.get('/reminders')
+@login_required('patient')
+def reminders():
+    """Напоминания о лекарствах и замерах: что включено и можно ли добавить замер."""
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+        cur.execute(
+            """SELECT s.id, s.time_of_day, s.dose, s.enabled, m.name FROM medication_slots s
+               JOIN medications m ON m.id = s.medication_id
+               WHERE m.patient_id = %s ORDER BY s.time_of_day, s.id""",
+            (patient['user_id'],),
+        )
+        medications = [{
+            'id': row['id'],
+            'title': row['name'],
+            'subtitle': row['dose'],
+            'time': row['time_of_day'].strftime('%H:%M'),
+            'enabled': row['enabled'],
+        } for row in cur.fetchall()]
+
+        cur.execute(
+            'SELECT id, kind, time_of_day, enabled FROM measurement_reminders WHERE patient_id = %s ORDER BY time_of_day',
+            (patient['user_id'],),
+        )
+        measurements = [{
+            'id': row['id'],
+            'title': REMINDER_TITLES[row['kind']],
+            'subtitle': 'каждый день',
+            'time': row['time_of_day'].strftime('%H:%M'),
+            'enabled': row['enabled'],
+        } for row in cur.fetchall()]
+        kind = NOSOLOGY_KIND[patient['nosology']]
+
+    return jsonify({
+        'kind': kind,
+        'medications': medications,
+        'measurements': measurements,
+        'addOptions': [{'id': kind, 'label': KIND_TITLES[kind]}],
+    })
+
+
+@bp.post('/reminders/medications/<int:slot_id>')
+@login_required('patient')
+def set_medication_reminder(slot_id):
+    enabled = bool((request.get_json(silent=True) or {}).get('enabled'))
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        cur.execute(
+            """SELECT s.id FROM medication_slots s JOIN medications m ON m.id = s.medication_id
+               WHERE s.id = %s AND m.patient_id = %s""",
+            (slot_id, patient['user_id'] if patient else None),
+        )
+        if not cur.fetchone():
+            return error('Напоминание не найдено.', 404)
+        cur.execute('UPDATE medication_slots SET enabled = %s WHERE id = %s', (enabled, slot_id))
+        audit(cur, 'reminder_changed', patient['user_id'], f'slot:{slot_id}', request.remote_addr)
+    return jsonify({'enabled': enabled})
+
+
+@bp.post('/reminders/measurements')
+@login_required('patient')
+def add_measurement_reminder():
+    data = request.get_json(silent=True) or {}
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+        expected = NOSOLOGY_KIND[patient['nosology']]
+        if data.get('kind') != expected:
+            return error('Можно добавить напоминание только о своём показателе.')
+        time_text = str(data.get('time', '')).strip()
+        if not REMINDER_TIME.match(time_text):
+            return error('Укажите время в формате ЧЧ:ММ.')
+        cur.execute(
+            """INSERT INTO measurement_reminders (patient_id, kind, time_of_day) VALUES (%s, %s, %s)
+               RETURNING id""",
+            (patient['user_id'], expected, time_text),
+        )
+        reminder_id = cur.fetchone()['id']
+        audit(cur, 'reminder_added', patient['user_id'], f'reminder:{reminder_id}', request.remote_addr)
+    return jsonify({
+        'reminder': {
+            'id': reminder_id,
+            'title': REMINDER_TITLES[expected],
+            'subtitle': 'каждый день',
+            'time': time_text,
+            'enabled': True,
+        },
+    }), 201
+
+
+@bp.post('/reminders/measurements/<int:reminder_id>')
+@login_required('patient')
+def set_measurement_reminder(reminder_id):
+    enabled = bool((request.get_json(silent=True) or {}).get('enabled'))
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        cur.execute(
+            'UPDATE measurement_reminders SET enabled = %s WHERE id = %s AND patient_id = %s RETURNING id',
+            (enabled, reminder_id, patient['user_id'] if patient else None),
+        )
+        if not cur.fetchone():
+            return error('Напоминание не найдено.', 404)
+        audit(cur, 'reminder_changed', patient['user_id'], f'reminder:{reminder_id}', request.remote_addr)
+    return jsonify({'enabled': enabled})
 
 
 def parse_number(value):

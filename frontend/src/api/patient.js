@@ -27,3 +27,20 @@ export function getLatestAlert() {
 export function getHistory(days) {
   return request(`/patient/measurements?days=${days}`)
 }
+
+// Напоминания: лекарства и замеры
+export function getReminders() {
+  return request('/patient/reminders')
+}
+
+export function setMedicationReminder(slotId, enabled) {
+  return request(`/patient/reminders/medications/${slotId}`, { method: 'POST', body: { enabled } })
+}
+
+export function setMeasurementReminder(reminderId, enabled) {
+  return request(`/patient/reminders/measurements/${reminderId}`, { method: 'POST', body: { enabled } })
+}
+
+export function addMeasurementReminder({ kind, time }) {
+  return request('/patient/reminders/measurements', { method: 'POST', body: { kind, time } })
+}

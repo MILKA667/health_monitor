@@ -204,6 +204,9 @@ CREATE TABLE IF NOT EXISTS medication_slots (
     dose           TEXT NOT NULL DEFAULT ''
 );
 
+-- Напоминание можно выключить отдельно для каждого времени приёма
+ALTER TABLE medication_slots ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
+
 -- Отметки о приёме. Удалять и менять их нельзя: приверженность — часть медкарты.
 CREATE TABLE IF NOT EXISTS medication_intakes (
     slot_id   INTEGER NOT NULL REFERENCES medication_slots (id) ON DELETE CASCADE,
