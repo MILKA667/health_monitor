@@ -247,3 +247,10 @@ CREATE TABLE IF NOT EXISTS measurement_reminders (
     time_of_day TIME NOT NULL,
     enabled     BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+-- Каналы напоминаний пациента. Строки может не быть — тогда оба канала включены.
+CREATE TABLE IF NOT EXISTS patient_settings (
+    patient_id    INTEGER PRIMARY KEY REFERENCES patients (user_id),
+    push_enabled  BOOLEAN NOT NULL DEFAULT TRUE,
+    sms_enabled   BOOLEAN NOT NULL DEFAULT TRUE
+);

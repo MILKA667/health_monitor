@@ -6,6 +6,7 @@ const PATIENT_TABS = [
   { to: '/patient', label: 'Сегодня', end: true },
   { to: '/patient/history', label: 'История' },
   { to: '/patient/chat', label: 'Чат' },
+  { to: '/patient/profile', label: 'Профиль' },
 ]
 
 // Нижняя навигация пациента; у активной вкладки синяя полоса сверху

@@ -219,3 +219,90 @@ def test_chat_requires_patient(client, demo):
     assert client.get('/api/patient/chat').status_code == 401
     login(client, 'doctor@demo.ru')
     assert client.get('/api/patient/chat').status_code == 403
+
+
+def test_profile(client, demo):
+    login(client, '+79000000102')
+    profile = client.get('/api/patient/profile').get_json()
+
+    assert profile['name'] == 'Ковалёва Нина Петровна'
+    assert profile['phoneMasked'] == '+7 ••• ••• 01 02'
+    assert profile['doctor'] == {'name': 'Смирнова Е. А.', 'specialty': 'эндокринолог'}
+    assert profile['relative']['name'] == 'Ковалёв Дмитрий, сын'
+    assert profile['relative']['smsAlerts'] is True
+    assert [(device['kind'], device['connected']) for device in profile['devices']] == [('glucometer', True)]
+    assert profile['channels'] == {'push': True, 'sms': True}
+    assert profile['consents']['personalData'] is not None
+    assert profile['consents']['relativeAccess'] is not None
+    assert profile['passwordChangedAt'] is not None
+
+
+def test_profile_toggles(client, demo):
+    login(client, '+79000000102')
+
+    assert client.post('/api/patient/profile', json={'sms': False}).get_json()['channels'] == {
+        'push': True, 'sms': False}
+    assert client.post('/api/patient/profile', json={'relativeSms': False}).get_json()['relative']['smsAlerts'] is False
+    response = client.post('/api/patient/profile', json={'push': False})
+    assert response.status_code == 400
+    assert 'хотя бы один способ' in response.get_json()['error']
+
+    with db_cursor() as cur:
+        cur.execute("SELECT count(*) AS n FROM audit_log WHERE action = 'profile_updated'")
+        assert cur.fetchone()['n'] == 2
+
+
+def test_devices(client, demo):
+    login(client, '+79000000102')
+    device = client.get('/api/patient/devices').get_json()['devices'][0]
+    before = device['lastSync']
+
+    synced = client.post(f"/api/patient/devices/{device['id']}/sync").get_json()['device']
+    assert synced['lastSync'] >= before
+    assert client.post(f"/api/patient/devices/{device['id']}/connected", json={'connected': False}) \
+        .get_json()['device']['connected'] is False
+    assert client.post(f"/api/patient/devices/{device['id']}/connected", json={'connected': True}).status_code == 200
+    assert client.post('/api/patient/devices/connect', json={'kind': 'tonometer'}).status_code == 400
+
+    login(client, '+79000000103')
+    assert client.post('/api/patient/devices/1/sync').status_code == 404
+
+    login(client, '+79000000104')  # астма, устройства нет
+    assert client.get('/api/patient/devices').get_json()['devices'] == []
+    connected = client.post('/api/patient/devices/connect', json={'kind': 'peakflow'})
+    assert connected.status_code == 201
+    assert connected.get_json()['device']['kind'] == 'peakflow'
+    assert client.post('/api/patient/devices/connect', json={'kind': 'peakflow'}).status_code == 201
+
+
+def test_password_change(client, make_client, demo):
+    login(client, '+79000000102')
+    assert client.post('/api/patient/password', json={
+        'currentPassword': 'wrong', 'password': 'Newpass123'}).status_code == 400
+    assert client.post('/api/patient/password', json={
+        'currentPassword': 'demo1234', 'password': 'short'}).status_code == 400
+    assert client.post('/api/patient/password', json={
+        'currentPassword': 'demo1234', 'password': 'Newpass0102'}).status_code == 400
+
+    other = make_client()
+    login(other, '+79000000102')
+    response = client.post('/api/patient/password', json={
+        'currentPassword': 'demo1234', 'password': 'Newpass123', 'signOutOthers': False})
+    assert response.status_code == 200
+    assert response.get_json()['othersSignedOut'] is False
+    assert other.get('/api/patient/profile').status_code == 200
+    assert login(make_client(), '+79000000102', 'Newpass123')['role'] == 'patient'
+
+    second = make_client()
+    login(second, '+79000000102', 'Newpass123')
+    other2 = make_client()
+    login(other2, '+79000000102', 'Newpass123')
+    assert client.post('/api/patient/password', json={
+        'currentPassword': 'Newpass123', 'password': 'Another123', 'signOutOthers': True}).status_code == 200
+    assert other2.get('/api/patient/profile').status_code == 401
+    assert second.get('/api/patient/profile').status_code == 401
+    assert client.get('/api/patient/profile').status_code == 200
+
+    with db_cursor() as cur:
+        cur.execute("SELECT text FROM sms_outbox WHERE phone = '79000000102' ORDER BY id DESC LIMIT 1")
+        assert 'пароль изменён' in cur.fetchone()['text']
