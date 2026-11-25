@@ -1,5 +1,6 @@
 import os
 from contextlib import contextmanager
+from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
@@ -31,3 +32,13 @@ def audit(cur, action, user_id=None, obj=None, ip=None, is_security=False):
         'INSERT INTO audit_log (user_id, action, object, ip, is_security) VALUES (%s, %s, %s, %s, %s)',
         (user_id, action, obj, ip, is_security),
     )
+
+
+def apply_schema():
+    """Создаёт таблицы из schema.sql; повторный запуск безопасен."""
+    conn = get_db_connection()
+    try:
+        with conn, conn.cursor() as cur:
+            cur.execute((Path(__file__).parent / 'schema.sql').read_text(encoding='utf-8'))
+    finally:
+        conn.close()

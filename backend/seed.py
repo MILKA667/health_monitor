@@ -2,6 +2,7 @@
 from datetime import date, datetime, timedelta, timezone
 
 import click
+from flask.cli import with_appcontext
 from werkzeug.security import generate_password_hash
 
 from db import db_cursor
@@ -131,6 +132,7 @@ def seed_patient(cur, doctor_id, data, now):
 
 
 @click.command('seed-demo')
+@with_appcontext
 def seed_demo():
     """Создаёт демо-врачей, пациентов с измерениями и администратора (повторный запуск безопасен)."""
     now = datetime.now(timezone.utc)
