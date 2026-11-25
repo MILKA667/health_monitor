@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
-vi.mock('./api/auth', () => ({ logout: vi.fn() }))
+vi.mock('./api/auth', () => ({ logout: vi.fn(), getMe: vi.fn() }))
 vi.mock('./api/doctor', () => ({
   getDoctorHeader: vi.fn(),
   getConversations: vi.fn(),
@@ -11,7 +11,15 @@ vi.mock('./api/doctor', () => ({
   getReports: vi.fn(),
   getReport: vi.fn(),
 }))
+vi.mock('./api/patient', () => ({
+  getHome: vi.fn(),
+  toggleIntake: vi.fn(),
+  addMeasurement: vi.fn(),
+  getLatestAlert: vi.fn(),
+}))
 const api = await import('./api/doctor')
+const auth = await import('./api/auth')
+const patient = await import('./api/patient')
 
 function renderApp(path) {
   window.history.pushState({}, '', path)
@@ -44,6 +52,21 @@ describe('App: маршруты врача', () => {
     renderApp('/doctor/reports')
     expect(await screen.findByRole('heading', { name: 'Новый отчёт' })).toBeInTheDocument()
     expect(screen.getByText('Отчётов пока нет.')).toBeInTheDocument()
+  })
+
+  it('открывает главную пациента', async () => {
+    auth.getMe.mockResolvedValue({
+      id: 4, role: 'patient', name: 'Ковалёва Нина Петровна', shortName: 'Ковалёва Н. П.', mustChangePassword: false,
+    })
+    patient.getHome.mockResolvedValue({
+      name: 'Ковалёва Н. П.', kind: 'glucose', kindTitle: 'Глюкоза крови', target: '4,4–10,0 ммоль/л',
+      limits: { crit_low: 3.9, warn_low: 4.4, warn_high: 10, crit_high: 13.9 }, pefBest: null,
+      last: null, recent: [], plan: { done: 0, total: 0, items: [] },
+    })
+    renderApp('/patient')
+    expect(await screen.findByText('Ковалёва Н. П.')).toBeInTheDocument()
+    expect(await screen.findByText(/Замеров пока нет/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Сегодня' })).toHaveAttribute('href', '/patient')
   })
 
   it('не пускает неизвестный адрес врача — ведёт на вход', async () => {

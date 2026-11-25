@@ -11,6 +11,11 @@ export function logout() {
   return request('/auth/logout', { method: 'POST' })
 }
 
+// → { id, role, name, shortName, mustChangePassword }
+export function getMe() {
+  return request('/auth/me')
+}
+
 // application: { role: 'patient' | 'relative' | 'doctor', name, phone, email, extra, consents: { personalData, noDiagnosis } }
 export function register(application) {
   return request('/auth/register', { method: 'POST', body: application })

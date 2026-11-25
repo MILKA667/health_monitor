@@ -209,6 +209,22 @@ def seed_messages(cur, patient_id, doctor_id, now):
         )
 
 
+def seed_reminders(cur, patient_id, nosology):
+    """Одно напоминание о замере на пациента, чтобы «План на сегодня» не был пустым."""
+    cur.execute('SELECT 1 FROM measurement_reminders WHERE patient_id = %s LIMIT 1', (patient_id,))
+    if cur.fetchone():
+        return
+    kind, time_text = {
+        'diabetes': ('glucose', '10:30'),
+        'hypertension': ('bp', '08:00'),
+        'asthma': ('pef', '07:30'),
+    }[nosology]
+    cur.execute(
+        'INSERT INTO measurement_reminders (patient_id, kind, time_of_day) VALUES (%s, %s, %s)',
+        (patient_id, kind, time_text),
+    )
+
+
 @click.command('seed-demo')
 @with_appcontext
 def seed_demo():
@@ -230,6 +246,7 @@ def seed_demo():
         for data in PATIENTS:
             patient_id = seed_patient(cur, doctor_ids[0], data, now)
             seed_medications(cur, patient_id, data['nosology'], now)
+            seed_reminders(cur, patient_id, data['nosology'])
             seed_messages(cur, patient_id, doctor_ids[0], now)
 
     click.echo(f'Готово. Пароль врачей, администратора и пациентов: {DEMO_PASSWORD}; '

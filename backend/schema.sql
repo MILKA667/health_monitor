@@ -235,3 +235,12 @@ CREATE TABLE IF NOT EXISTS reports (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS reports_doctor_time ON reports (doctor_id, created_at DESC);
+
+-- Напоминания о замерах, которые настраивает пациент
+CREATE TABLE IF NOT EXISTS measurement_reminders (
+    id          SERIAL PRIMARY KEY,
+    patient_id  INTEGER NOT NULL REFERENCES patients (user_id),
+    kind        TEXT NOT NULL CHECK (kind IN ('glucose', 'bp', 'pef')),
+    time_of_day TIME NOT NULL,
+    enabled     BOOLEAN NOT NULL DEFAULT TRUE
+);

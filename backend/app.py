@@ -12,6 +12,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import auth
 import dialogs
 import doctor
+import patient
 import reports
 import seed
 import thresholds
@@ -41,6 +42,7 @@ app.register_blueprint(doctor.bp)
 app.register_blueprint(thresholds.bp)
 app.register_blueprint(dialogs.bp)
 app.register_blueprint(reports.bp)
+app.register_blueprint(patient.bp)
 app.cli.add_command(seed.seed_demo)
 
 

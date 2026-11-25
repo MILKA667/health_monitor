@@ -19,6 +19,8 @@ export const DEVICE_NAMES = {
 }
 
 const WEEKDAYS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября',
+  'ноября', 'декабря']
 const pad = (n) => String(n).padStart(2, '0')
 
 function isToday(date) {
@@ -50,6 +52,11 @@ export function formatDayTime(iso) {
 // Ср, 28.10.2026
 export function formatToday(date = new Date()) {
   return `${WEEKDAYS[date.getDay()]}, ${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()}`
+}
+
+// Сегодня, 28 октября
+export function formatTodayLong(date = new Date()) {
+  return `Сегодня, ${date.getDate()} ${MONTHS[date.getMonth()]}`
 }
 
 export function plural(n, one, few, many) {

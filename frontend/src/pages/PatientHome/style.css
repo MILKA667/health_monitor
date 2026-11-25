@@ -1,0 +1,126 @@
+.patient-muted {
+  color: var(--text-2);
+  font-size: var(--tm-secondary);
+  line-height: 20px;
+}
+
+.home-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-1) var(--s-2);
+  margin-top: var(--s-1);
+}
+
+.home-value__label {
+  color: var(--text);
+}
+
+.home-value__number {
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 28px;
+}
+
+.home-value__number--crit {
+  color: var(--crit);
+}
+
+.home-value__number--warn {
+  color: var(--warn-text);
+}
+
+.home-value__unit {
+  color: var(--text-2);
+  font-size: var(--tm-secondary);
+}
+
+.home-plan__count {
+  color: var(--text-2);
+  font-weight: 400;
+}
+
+.home-plan__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 56px;
+  padding: var(--s-1) 0;
+  border-bottom: 1px solid var(--border-row);
+  cursor: pointer;
+}
+
+.home-plan__check {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.home-plan__check:disabled {
+  cursor: default;
+}
+
+.home-plan__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  line-height: 20px;
+}
+
+.home-plan__title--done {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.home-plan__sub {
+  color: var(--text-2);
+  font-size: var(--tm-secondary);
+}
+
+.home-plan__time {
+  color: var(--text-2);
+  font-size: var(--tm-secondary);
+}
+
+.home-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tm-secondary);
+  line-height: 20px;
+}
+
+.home-table td {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-row);
+}
+
+.home-table__when {
+  color: var(--text-2);
+}
+
+.home-table__value {
+  font-weight: 500;
+  text-align: right;
+}
+
+.home-table__value--crit {
+  color: var(--crit);
+}
+
+.home-table__value--warn {
+  color: var(--warn-text);
+}
+
+.home-table__context {
+  padding-left: var(--s-3);
+  color: var(--text-2);
+}
+
+@media (max-width: 700px) {
+  .patient-page {
+    padding-right: var(--page-x-mobile);
+    padding-left: var(--page-x-mobile);
+  }
+}

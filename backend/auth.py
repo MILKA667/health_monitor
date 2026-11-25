@@ -7,7 +7,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from db import audit, db_cursor
 from security import (current_user, error, login_required, mask_phone, normalize_email, normalize_phone,
-                      parse_login, password_problem, start_session)
+                      parse_login, password_problem, short_name, start_session)
 from sms import send_sms
 
 bp = Blueprint('auth', __name__, url_prefix='/api/auth')
@@ -100,6 +100,7 @@ def me():
         'id': user['id'],
         'role': user['role'],
         'name': user['name'],
+        'shortName': short_name(user['name']),
         'mustChangePassword': user['must_change_password'],
     })
 
