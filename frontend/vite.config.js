@@ -5,6 +5,7 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: '0.0.0.0',
     // Запросы /api уходят во Flask (backend/app.py)
     proxy: {
       '/api': 'http://localhost:5000',

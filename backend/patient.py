@@ -1,13 +1,17 @@
 """Экраны пациента: главная с планом на сегодня, ввод показателя и алерт."""
 from datetime import date, datetime, timezone
+import re
 
 from flask import Blueprint, jsonify, request
+from werkzeug.security import check_password_hash, generate_password_hash
 
+import chat
 from db import audit, db_cursor
 from doctor import chart_payload, stats_payload
 from monitoring import (NOSOLOGY_KIND, UNITS, evaluate, fmt_number, fmt_value, load_thresholds, record_measurement,
                         target_text)
-from security import current_user, error, login_required, short_name
+from security import current_user, error, login_required, mask_phone, password_problem, short_name, start_session
+from sms import send_sms
 
 bp = Blueprint('patient', __name__, url_prefix='/api/patient')
 
@@ -25,7 +29,7 @@ def iso(value):
 def own_patient(cur):
     user = current_user()
     cur.execute(
-        """SELECT p.*, u.name, u.phone FROM patients p JOIN users u ON u.id = p.user_id
+        """SELECT p.*, u.name, u.phone, u.password_changed_at FROM patients p JOIN users u ON u.id = p.user_id
            WHERE p.user_id = %s""",
         (user['id'],),
     )
@@ -53,7 +57,7 @@ def plan_items(cur, patient):
     cur.execute(
         """SELECT s.id, s.time_of_day, s.dose, m.name FROM medication_slots s
            JOIN medications m ON m.id = s.medication_id
-           WHERE m.patient_id = %s AND m.enabled
+           WHERE m.patient_id = %s AND m.enabled AND s.enabled
            ORDER BY s.time_of_day""",
         (patient['user_id'],),
     )
@@ -155,6 +159,347 @@ def toggle_intake(slot_id):
                         (slot_id, date.today()))
         audit(cur, 'medication_intake', patient['user_id'], f'slot:{slot_id}', request.remote_addr)
     return jsonify({'done': done})
+
+
+REMINDER_TIME = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$')
+
+DEVICE_LABELS = {'glucometer': 'Глюкометр', 'tonometer': 'Тонометр', 'peakflow': 'Пикфлоуметр'}
+DEVICE_MODELS = {'glucometer': '[модель глюкометра]', 'tonometer': '[модель тонометра]',
+                 'peakflow': '[модель пикфлоуметра]'}
+DEVICE_OF_KIND = {'glucose': 'glucometer', 'bp': 'tonometer', 'pef': 'peakflow'}
+
+
+def device_json(row):
+    return {
+        'id': row['id'],
+        'kind': row['kind'],
+        'name': DEVICE_LABELS[row['kind']],
+        'model': row['model'],
+        'connected': row['connected'],
+        'lastSync': iso(row['last_sync']),
+    }
+
+
+def profile_payload(cur, patient):
+    cur.execute(
+        'SELECT u.name, d.specialty FROM doctors d JOIN users u ON u.id = d.user_id WHERE d.user_id = %s',
+        (patient['doctor_id'],),
+    )
+    doctor = cur.fetchone()
+    cur.execute('SELECT name, phone, sms_alerts FROM patient_contacts WHERE patient_id = %s', (patient['user_id'],))
+    contact = cur.fetchone()
+    cur.execute('SELECT * FROM devices WHERE patient_id = %s ORDER BY id', (patient['user_id'],))
+    devices = cur.fetchall()
+    cur.execute('SELECT * FROM patient_settings WHERE patient_id = %s', (patient['user_id'],))
+    settings = cur.fetchone()
+    cur.execute(
+        """SELECT kind, max(given_at) AS given_at FROM consents
+           WHERE user_id = %s AND revoked_at IS NULL GROUP BY kind""",
+        (patient['user_id'],),
+    )
+    consents = {row['kind']: row['given_at'] for row in cur.fetchall()}
+
+    return {
+        'name': patient['name'],
+        'phoneMasked': mask_phone(patient['phone']) if patient['phone'] else None,
+        'doctor': {'name': short_name(doctor['name']) if doctor else None,
+                   'specialty': doctor['specialty'] if doctor else None},
+        'relative': contact and {
+            'name': contact['name'],
+            'phoneMasked': mask_phone(contact['phone']),
+            'smsAlerts': contact['sms_alerts'],
+        },
+        'devices': [device_json(row) for row in devices],
+        'channels': {
+            'push': settings['push_enabled'] if settings else True,
+            'sms': settings['sms_enabled'] if settings else True,
+        },
+        'consents': {
+            'personalData': iso(consents.get('personal_data')),
+            'relativeAccess': iso(consents.get('relative_sms')),
+        },
+        'passwordChangedAt': iso(patient['password_changed_at']),
+    }
+
+
+@bp.get('/profile')
+@login_required('patient')
+def profile():
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+        payload = profile_payload(cur, patient)
+    return jsonify(payload)
+
+
+@bp.post('/profile')
+@login_required('patient')
+def update_profile():
+    data = request.get_json(silent=True) or {}
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+
+        if 'relativeSms' in data:
+            cur.execute('SELECT 1 FROM patient_contacts WHERE patient_id = %s', (patient['user_id'],))
+            if cur.fetchone():
+                cur.execute('UPDATE patient_contacts SET sms_alerts = %s WHERE patient_id = %s',
+                            (bool(data.get('relativeSms')), patient['user_id']))
+
+        cur.execute('SELECT * FROM patient_settings WHERE patient_id = %s', (patient['user_id'],))
+        settings = cur.fetchone() or {'push_enabled': True, 'sms_enabled': True}
+        push = bool(data.get('push', settings['push_enabled']))
+        sms = bool(data.get('sms', settings['sms_enabled']))
+        if not push and not sms:
+            return error('Выберите хотя бы один способ, иначе напоминания не придут.')
+        cur.execute(
+            """INSERT INTO patient_settings (patient_id, push_enabled, sms_enabled) VALUES (%s, %s, %s)
+               ON CONFLICT (patient_id) DO UPDATE SET push_enabled = EXCLUDED.push_enabled,
+                                                     sms_enabled = EXCLUDED.sms_enabled""",
+            (patient['user_id'], push, sms),
+        )
+        audit(cur, 'profile_updated', patient['user_id'], None, request.remote_addr)
+        payload = profile_payload(cur, patient)
+    return jsonify(payload)
+
+
+@bp.get('/devices')
+@login_required('patient')
+def devices():
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+        cur.execute('SELECT * FROM devices WHERE patient_id = %s ORDER BY id', (patient['user_id'],))
+        rows = cur.fetchall()
+        device_kind = DEVICE_OF_KIND[NOSOLOGY_KIND[patient['nosology']]]
+    return jsonify({
+        'devices': [device_json(row) for row in rows],
+        'options': [{'kind': device_kind, 'label': DEVICE_LABELS[device_kind]}],
+    })
+
+
+@bp.post('/devices/connect')
+@login_required('patient')
+def connect_device():
+    data = request.get_json(silent=True) or {}
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+        kind = DEVICE_OF_KIND[NOSOLOGY_KIND[patient['nosology']]]
+        if data.get('kind') != kind:
+            return error('Подключить можно устройство для вашего показателя.')
+        cur.execute(
+            """INSERT INTO devices (patient_id, kind, model, connected, last_sync)
+               VALUES (%s, %s, %s, TRUE, NULL)
+               ON CONFLICT DO NOTHING RETURNING *""",
+            (patient['user_id'], kind, DEVICE_MODELS[kind]),
+        )
+        row = cur.fetchone()
+        if not row:
+            cur.execute(
+                'UPDATE devices SET connected = TRUE WHERE patient_id = %s AND kind = %s RETURNING *',
+                (patient['user_id'], kind),
+            )
+            row = cur.fetchone()
+        audit(cur, 'device_connected', patient['user_id'], f"device:{row['id']}", request.remote_addr)
+    return jsonify({'device': device_json(row)}), 201
+
+
+def own_device(cur, patient, device_id):
+    cur.execute('SELECT * FROM devices WHERE id = %s AND patient_id = %s', (device_id, patient['user_id']))
+    return cur.fetchone()
+
+
+@bp.post('/devices/<int:device_id>/sync')
+@login_required('patient')
+def sync_device(device_id):
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not own_device(cur, patient, device_id):
+            return error('Устройство не найдено.', 404)
+        cur.execute('UPDATE devices SET last_sync = now() WHERE id = %s RETURNING *', (device_id,))
+        row = cur.fetchone()
+        audit(cur, 'device_synced', patient['user_id'], f'device:{device_id}', request.remote_addr)
+    return jsonify({'device': device_json(row)})
+
+
+@bp.post('/devices/<int:device_id>/connected')
+@login_required('patient')
+def set_device_connected(device_id):
+    connected = bool((request.get_json(silent=True) or {}).get('connected'))
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not own_device(cur, patient, device_id):
+            return error('Устройство не найдено.', 404)
+        cur.execute('UPDATE devices SET connected = %s WHERE id = %s RETURNING *', (connected, device_id))
+        row = cur.fetchone()
+        audit(cur, 'device_connected' if connected else 'device_disconnected', patient['user_id'],
+              f'device:{device_id}', request.remote_addr)
+    return jsonify({'device': device_json(row)})
+
+
+@bp.post('/password')
+@login_required('patient')
+def change_password():
+    user = current_user()
+    data = request.get_json(silent=True) or {}
+    current = str(data.get('currentPassword', ''))
+    password = str(data.get('password', ''))
+    sign_out_others = data.get('signOutOthers') is not False
+
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        cur.execute('SELECT * FROM users WHERE id = %s', (user['id'],))
+        row = cur.fetchone()
+        if not row or not check_password_hash(row['password_hash'], current):
+            return error('Неверный текущий пароль.')
+        problem = password_problem(password, (
+            row['phone'][-4:] if row['phone'] else None,
+            row['phone'],
+            row['email'],
+            str(patient['birth_date'].year) if patient else None,
+        ))
+        if problem:
+            return error(problem)
+        if sign_out_others:
+            cur.execute(
+                """UPDATE users SET password_hash = %s, password_changed_at = now(), must_change_password = FALSE,
+                          session_version = session_version + 1
+                   WHERE id = %s RETURNING *""",
+                (generate_password_hash(password), row['id']),
+            )
+        else:
+            cur.execute(
+                """UPDATE users SET password_hash = %s, password_changed_at = now(), must_change_password = FALSE
+                   WHERE id = %s RETURNING *""",
+                (generate_password_hash(password), row['id']),
+            )
+        updated = cur.fetchone()
+        if row['phone']:
+            send_sms(cur, row['phone'], 'HealthMonitor: пароль изменён. Если это были не вы, позвоните в клинику.')
+        audit(cur, 'password_changed', row['id'], None, request.remote_addr, is_security=True)
+
+    if sign_out_others:
+        # Текущий сеанс продолжаем уже с новой версией
+        start_session(updated)
+    return jsonify({
+        'ok': True,
+        'othersSignedOut': sign_out_others,
+        'passwordChangedAt': iso(updated['password_changed_at']),
+    })
+
+
+@bp.get('/reminders')
+@login_required('patient')
+def reminders():
+    """Напоминания о лекарствах и замерах: что включено и можно ли добавить замер."""
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+        cur.execute(
+            """SELECT s.id, s.time_of_day, s.dose, s.enabled, m.name FROM medication_slots s
+               JOIN medications m ON m.id = s.medication_id
+               WHERE m.patient_id = %s ORDER BY s.time_of_day, s.id""",
+            (patient['user_id'],),
+        )
+        medications = [{
+            'id': row['id'],
+            'title': row['name'],
+            'subtitle': row['dose'],
+            'time': row['time_of_day'].strftime('%H:%M'),
+            'enabled': row['enabled'],
+        } for row in cur.fetchall()]
+
+        cur.execute(
+            'SELECT id, kind, time_of_day, enabled FROM measurement_reminders WHERE patient_id = %s ORDER BY time_of_day',
+            (patient['user_id'],),
+        )
+        measurements = [{
+            'id': row['id'],
+            'title': REMINDER_TITLES[row['kind']],
+            'subtitle': 'каждый день',
+            'time': row['time_of_day'].strftime('%H:%M'),
+            'enabled': row['enabled'],
+        } for row in cur.fetchall()]
+        kind = NOSOLOGY_KIND[patient['nosology']]
+
+    return jsonify({
+        'kind': kind,
+        'medications': medications,
+        'measurements': measurements,
+        'addOptions': [{'id': kind, 'label': KIND_TITLES[kind]}],
+    })
+
+
+@bp.post('/reminders/medications/<int:slot_id>')
+@login_required('patient')
+def set_medication_reminder(slot_id):
+    enabled = bool((request.get_json(silent=True) or {}).get('enabled'))
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        cur.execute(
+            """SELECT s.id FROM medication_slots s JOIN medications m ON m.id = s.medication_id
+               WHERE s.id = %s AND m.patient_id = %s""",
+            (slot_id, patient['user_id'] if patient else None),
+        )
+        if not cur.fetchone():
+            return error('Напоминание не найдено.', 404)
+        cur.execute('UPDATE medication_slots SET enabled = %s WHERE id = %s', (enabled, slot_id))
+        audit(cur, 'reminder_changed', patient['user_id'], f'slot:{slot_id}', request.remote_addr)
+    return jsonify({'enabled': enabled})
+
+
+@bp.post('/reminders/measurements')
+@login_required('patient')
+def add_measurement_reminder():
+    data = request.get_json(silent=True) or {}
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+        expected = NOSOLOGY_KIND[patient['nosology']]
+        if data.get('kind') != expected:
+            return error('Можно добавить напоминание только о своём показателе.')
+        time_text = str(data.get('time', '')).strip()
+        if not REMINDER_TIME.match(time_text):
+            return error('Укажите время в формате ЧЧ:ММ.')
+        cur.execute(
+            """INSERT INTO measurement_reminders (patient_id, kind, time_of_day) VALUES (%s, %s, %s)
+               RETURNING id""",
+            (patient['user_id'], expected, time_text),
+        )
+        reminder_id = cur.fetchone()['id']
+        audit(cur, 'reminder_added', patient['user_id'], f'reminder:{reminder_id}', request.remote_addr)
+    return jsonify({
+        'reminder': {
+            'id': reminder_id,
+            'title': REMINDER_TITLES[expected],
+            'subtitle': 'каждый день',
+            'time': time_text,
+            'enabled': True,
+        },
+    }), 201
+
+
+@bp.post('/reminders/measurements/<int:reminder_id>')
+@login_required('patient')
+def set_measurement_reminder(reminder_id):
+    enabled = bool((request.get_json(silent=True) or {}).get('enabled'))
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        cur.execute(
+            'UPDATE measurement_reminders SET enabled = %s WHERE id = %s AND patient_id = %s RETURNING id',
+            (enabled, reminder_id, patient['user_id'] if patient else None),
+        )
+        if not cur.fetchone():
+            return error('Напоминание не найдено.', 404)
+        audit(cur, 'reminder_changed', patient['user_id'], f'reminder:{reminder_id}', request.remote_addr)
+    return jsonify({'enabled': enabled})
 
 
 def parse_number(value):
@@ -276,6 +621,65 @@ def history():
         'stats': stats_payload(kind, rows, thresholds, patient['pef_best']),
         'measurements': [measurement_card(row, thresholds, patient) for row in reversed(rows)],
     })
+
+
+@bp.get('/chat')
+@login_required('patient')
+def chat_thread():
+    """Переписка с врачом и последний критический алерт для системного сообщения."""
+    user = current_user()
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+        cur.execute(
+            'SELECT u.name, d.specialty FROM doctors d JOIN users u ON u.id = d.user_id WHERE d.user_id = %s',
+            (patient['doctor_id'],),
+        )
+        doctor = cur.fetchone()
+        history = chat.messages_for(cur, patient['user_id'])
+        chat.mark_read(cur, patient['user_id'], user['id'])
+        cur.execute(
+            """SELECT a.rule, a.created_at, m.value, m.value2, m.kind FROM alerts a
+               LEFT JOIN measurements m ON m.id = a.measurement_id
+               WHERE a.patient_id = %s AND a.level = 'crit'
+               ORDER BY a.created_at DESC LIMIT 1""",
+            (patient['user_id'],),
+        )
+        alert = cur.fetchone()
+        audit(cur, 'chat_viewed', user['id'], f"patient:{patient['user_id']}", request.remote_addr)
+
+    return jsonify({
+        'doctor': {
+            'name': short_name(doctor['name']) if doctor else None,
+            'specialty': doctor['specialty'] if doctor else None,
+            'hours': 'отвечает с 9:00 до 18:00',
+        },
+        'alert': alert and {
+            'createdAt': iso(alert['created_at']),
+            'value': fmt_value(alert) if alert['kind'] else None,
+            'unit': UNITS[alert['kind']] if alert['kind'] else None,
+            'rule': alert['rule'],
+        },
+        'messages': [chat.message_json(row, user['id']) for row in history],
+    })
+
+
+@bp.post('/chat')
+@login_required('patient')
+def chat_send():
+    user = current_user()
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+        try:
+            row = chat.add_message(cur, patient['user_id'], user['id'],
+                                   (request.get_json(silent=True) or {}).get('body'))
+        except ValueError as e:
+            return error(str(e))
+        audit(cur, 'message_sent', user['id'], f"patient:{patient['user_id']}", request.remote_addr)
+    return jsonify(chat.message_json(row, user['id'])), 201
 
 
 @bp.get('/alerts/latest')

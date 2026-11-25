@@ -116,10 +116,13 @@ def seed_patient(cur, doctor_id, data, now):
     cur.execute('SELECT 1 FROM consents WHERE user_id = %s LIMIT 1', (patient_id,))
     if not cur.fetchone() and not data.get('temporary'):
         # Учётки, созданные клиникой, согласия ещё не давали — их пациент подписывает при первом входе
+        consents = [(patient_id, 'personal_data', patient['enrolled_at']),
+                    (patient_id, 'no_diagnosis', patient['enrolled_at'])]
+        if data.get('contact'):
+            consents.append((patient_id, 'relative_sms', patient['enrolled_at']))
         cur.executemany(
             'INSERT INTO consents (user_id, kind, given_at) VALUES (%s, %s, %s)',
-            [(patient_id, 'personal_data', patient['enrolled_at']),
-             (patient_id, 'no_diagnosis', patient['enrolled_at'])],
+            consents,
         )
     cur.execute('SELECT 1 FROM measurements WHERE patient_id = %s LIMIT 1', (patient_id,))
     if cur.fetchone():

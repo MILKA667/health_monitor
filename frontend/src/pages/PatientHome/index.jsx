@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
 import { getHome, toggleIntake } from '../../api/patient'
 import Button from '../../components/Button'
 import FormError from '../../components/FormError'
@@ -80,6 +81,7 @@ function PatientHome() {
             План на сегодня
             <span className="num home-plan__count"> · {plan.done} из {plan.total}</span>
           </h2>
+          <Link to="/patient/reminders" className="patient-section__link">Настроить</Link>
         </div>
         {plan.items.length === 0 && <p className="patient-hint">Напоминаний нет.</p>}
         {plan.items.map((item) => (
