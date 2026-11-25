@@ -204,3 +204,51 @@ def test_patient_alert_log(client, demo):
     assert alerts[0]['relativeSmsAt'] is not None
     assert alerts[1]['acceptedBy'] == 'Смирнова Е. А.'
     assert alerts[2]['level'] == 'crit'
+
+
+def test_alerts_page(client, demo):
+    login(client, 'doctor@demo.ru')
+    payload = client.get('/api/doctor/alerts').get_json()
+
+    assert payload['counts'] == {'open': 7, 'closed': 10, 'all': 17}
+    assert payload['dutyDoctor'] == 'Орлов В. Н.'
+
+    kovaleva, saveliev = payload['alerts'][0], payload['alerts'][1]
+    assert kovaleva['patientName'] == 'Ковалёва Нина Петровна'
+    assert kovaleva['diagnosis'] == 'Сахарный диабет 2 типа'
+    assert (kovaleva['value'], kovaleva['unit']) == ('2,9', 'ммоль/л')
+    assert kovaleva['relativeName'] == 'Ковалёв Дмитрий, сын' and kovaleva['relativeSmsAt']
+    assert kovaleva['acceptedAt'] is None and kovaleva['canAccept'] is True and kovaleva['own'] is True
+    assert kovaleva['escalated'] is False
+
+    assert saveliev['patientName'] == 'Савельев Игорь Андреевич'
+    assert saveliev['escalated'] is True and saveliev['canAccept'] is True
+
+    nodata = [a for a in payload['alerts'] if a['level'] == 'nodata']
+    assert len(nodata) == 2 and all(a['value'] is None for a in nodata)
+    assert all(a['escalateAt'] is None for a in payload['alerts'] if a['level'] == 'warn')
+
+
+def test_alerts_accept_updates_counts(client, demo):
+    login(client, 'doctor@demo.ru')
+    alert = client.get('/api/doctor/alerts').get_json()['alerts'][0]
+
+    assert client.post(f"/api/doctor/alerts/{alert['id']}/accept", json={}).status_code == 200
+    counts = client.get('/api/doctor/alerts').get_json()['counts']
+    assert counts == {'open': 6, 'closed': 11, 'all': 17}
+
+
+def test_duty_doctor_sees_only_escalated_alerts(client, demo):
+    login(client, 'duty@demo.ru')
+    payload = client.get('/api/doctor/alerts').get_json()
+
+    assert [a['patientName'] for a in payload['alerts']] == ['Савельев Игорь Андреевич']
+    alert = payload['alerts'][0]
+    assert len(payload['alerts']) == 1
+    assert alert['own'] is False and alert['escalated'] is True and alert['canAccept'] is True
+    assert payload['counts'] == {'open': 1, 'closed': 0, 'all': 1}
+
+    assert client.post(f"/api/doctor/alerts/{alert['id']}/accept", json={}).status_code == 200
+    after = client.get('/api/doctor/alerts').get_json()
+    assert after['counts'] == {'open': 0, 'closed': 1, 'all': 1}
+    assert after['alerts'][0]['canUndo'] is True and after['alerts'][0]['acceptedBy'] == 'Орлов В. Н.'

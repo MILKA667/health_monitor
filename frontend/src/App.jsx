@@ -6,6 +6,7 @@ import Recover from './pages/Recover'
 import Register from './pages/Register'
 import Worklist from './pages/Worklist'
 import Record from './pages/Record'
+import Alerts from './pages/Alerts'
 
 // Этап 1: вход, заявка, восстановление пароля, первый вход.
 // Этап 2: врач. Страницы пациента, родственника и администратора добавляются следующими этапами.
@@ -20,6 +21,7 @@ function App() {
         <Route path="/doctor" element={<DoctorLayout />}>
           <Route index element={<Worklist />} />
           <Route path="patients/:patientId" element={<Record />} />
+          <Route path="alerts" element={<Alerts />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

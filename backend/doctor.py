@@ -549,6 +549,71 @@ def patient_alerts(patient_id):
     } for row in rows]})
 
 
+@bp.get('/alerts')
+@login_required('doctor')
+def alerts():
+    """Все алерты пациентов врача; дежурный дополнительно видит эскалированные чужие."""
+    user = current_user()
+    with db_cursor() as cur:
+        ensure_no_data_alerts(cur, user['id'])
+        cur.execute('SELECT on_duty FROM doctors WHERE user_id = %s', (user['id'],))
+        duty = cur.fetchone()
+        on_duty = bool(duty and duty['on_duty'])
+        cur.execute(
+            """SELECT a.*, p.diagnosis, u.name AS patient_name, u2.name AS accepted_by_name,
+                      m.value, m.value2, m.kind, c.name AS relative_name,
+                      (p.doctor_id = %s) AS own,
+                      COALESCE(a.accepted_at IS NULL AND a.escalate_at <= now(), FALSE) AS escalated
+               FROM alerts a
+               JOIN patients p ON p.user_id = a.patient_id
+               JOIN users u ON u.id = a.patient_id
+               LEFT JOIN users u2 ON u2.id = a.accepted_by
+               LEFT JOIN measurements m ON m.id = a.measurement_id
+               LEFT JOIN patient_contacts c ON c.patient_id = a.patient_id
+               WHERE p.doctor_id = %s
+                  OR (%s AND a.level = 'crit'
+                      AND ((a.accepted_at IS NULL AND a.escalate_at <= now()) OR a.accepted_by = %s))
+               ORDER BY a.created_at DESC
+               LIMIT 200""",
+            (user['id'], user['id'], on_duty, user['id']),
+        )
+        rows = cur.fetchall()
+        cur.execute(
+            """SELECT u.name FROM doctors d JOIN users u ON u.id = d.user_id
+               WHERE d.on_duty ORDER BY u.id LIMIT 1"""
+        )
+        duty_doctor = cur.fetchone()
+        audit(cur, 'alerts_viewed', user['id'], None, request.remote_addr)
+
+    items = [{
+        'id': row['id'],
+        'patientId': row['patient_id'],
+        'patientName': row['patient_name'],
+        'diagnosis': row['diagnosis'],
+        'level': row['level'],
+        'value': fmt_value(row) if row['kind'] else None,
+        'unit': UNITS[row['kind']] if row['kind'] else None,
+        'rule': row['rule'],
+        'createdAt': iso(row['created_at']),
+        'relativeName': row['relative_name'],
+        'relativeSmsAt': iso(row['relative_sms_at']),
+        'acceptedAt': iso(row['accepted_at']),
+        'acceptedBy': short_name(row['accepted_by_name']) if row['accepted_by_name'] else None,
+        'escalateAt': iso(row['escalate_at']),
+        'escalated': row['escalated'],
+        'own': row['own'],
+        'canAccept': row['accepted_at'] is None and (row['own'] or (on_duty and row['escalated'])),
+        'canUndo': row['accepted_by'] == user['id'],
+    } for row in rows]
+
+    open_count = sum(1 for item in items if item['acceptedAt'] is None)
+    return jsonify({
+        'counts': {'open': open_count, 'closed': len(items) - open_count, 'all': len(items)},
+        'dutyDoctor': short_name(duty_doctor['name']) if duty_doctor else None,
+        'alerts': items,
+    })
+
+
 def load_alert_for_action(cur, alert_id):
     """Принять алерт может лечащий врач пациента, а эскалированный — ещё и дежурный."""
     cur.execute(

@@ -51,3 +51,11 @@ export function sendMessage(patientId, body) {
 export function getPatientAlerts(patientId) {
   return request(`/doctor/patients/${patientId}/alerts`)
 }
+
+// Общий список алертов врача (дежурный видит и эскалированные чужие).
+// → { counts: { open, closed, all }, dutyDoctor, alerts: [{ id, patientId, patientName, diagnosis, level,
+//     value, unit, rule, createdAt, relativeName, relativeSmsAt, acceptedAt, acceptedBy, escalateAt,
+//     escalated, own, canAccept, canUndo }] }
+export function getAlerts() {
+  return request('/doctor/alerts')
+}
