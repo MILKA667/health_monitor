@@ -104,3 +104,103 @@ def test_no_data_alert_created_once(client, demo):
         cur.execute("SELECT count(*) AS n FROM alerts WHERE level = 'nodata'")
         # Фёдоров (3 дня без замеров) и Петрова (90 дней в наблюдении, замеров нет) — по одному алерту
         assert cur.fetchone()['n'] == 2
+
+
+def test_record(client, demo):
+    login(client, 'doctor@demo.ru')
+    patient_id = worklist(client)['Ковалёва Нина Петровна']['id']
+    record = client.get(f'/api/doctor/patients/{patient_id}/record?days=14').get_json()
+
+    assert record['sex'] == 'жен.'
+    assert record['diagnosis'] == 'Сахарный диабет 2 типа' and record['icdCode'] == 'E11.9'
+    assert record['consentAt'] is not None
+    assert record['stats'] == [
+        {'label': 'Среднее', 'value': '3,7'},
+        {'label': 'Мин.', 'value': '2,9', 'tone': 'crit'},
+        {'label': 'Макс.', 'value': '4,6', 'tone': None},
+        {'label': 'Вне цели', 'value': '3 из 4'},
+    ]
+    assert record['thresholds'][0]['value'] == 'ниже 3,9 или выше 13,9 ммоль/л'
+    assert record['thresholds'][1]['value'] == '4,4–10,0 ммоль/л'
+    assert record['escalationMinutes'] == 15
+
+    chart = record['chart']
+    assert chart['title'] == 'Глюкоза крови, ммоль/л'
+    assert chart['bands'] == [{'from': 4.4, 'to': 10.0}]
+    assert chart['guides'] == [{'value': 3.9, 'tone': 'crit', 'label': '3,9'}]
+    latest = chart['series'][0]['points'][-1]
+    assert (latest['value'], latest['level']) == (2.9, 'crit')
+    assert [m['sourceLabel'] for m in record['measurements']] == ['глюкометр', 'глюкометр', 'глюкометр', 'вручную']
+
+    with db_cursor() as cur:
+        cur.execute("SELECT object FROM audit_log WHERE action = 'record_viewed'")
+        assert cur.fetchone()['object'] == f'patient:{patient_id}'
+
+
+def test_record_chart_of_two_lines_and_bad_period(client, demo):
+    login(client, 'doctor@demo.ru')
+    patient_id = worklist(client)['Савельев Игорь Андреевич']['id']
+    record = client.get(f'/api/doctor/patients/{patient_id}/record?days=7').get_json()
+
+    assert [series['id'] for series in record['chart']['series']] == ['sys', 'dia']
+    assert record['chart']['bands'] == [{'from': 100.0, 'to': 140.0}]
+    assert record['stats'][0]['value'] == '168/101'
+    assert client.get(f'/api/doctor/patients/{patient_id}/record?days=5').status_code == 400
+
+
+def test_record_of_foreign_patient_is_hidden(client, demo):
+    login(client, 'duty@demo.ru')
+    with db_cursor() as cur:
+        cur.execute('SELECT user_id FROM patients LIMIT 1')
+        patient_id = cur.fetchone()['user_id']
+    assert client.get(f'/api/doctor/patients/{patient_id}/record').status_code == 404
+    assert client.get(f'/api/doctor/patients/{patient_id}/medications').status_code == 404
+    assert client.get(f'/api/doctor/patients/{patient_id}/messages').status_code == 404
+
+
+def test_medications_adherence(client, demo):
+    login(client, 'doctor@demo.ru')
+    patient_id = worklist(client)['Ковалёва Нина Петровна']['id']
+    medications = client.get(f'/api/doctor/patients/{patient_id}/medications').get_json()
+
+    assert medications['days'] == 14
+    assert len(medications['medications']) == 1
+    medication = medications['medications'][0]
+    assert medication['name'] == 'Метформин 1000 мг'
+    assert medication['schedule'] == '2 раза в день, после еды'
+    assert (medication['taken'], medication['expected'], medication['percent']) == (26, 28, 93)
+    assert medication['lastTakenAt'] is not None
+
+
+def test_messages(client, demo):
+    login(client, 'doctor@demo.ru')
+    patient_id = worklist(client)['Ковалёва Нина Петровна']['id']
+
+    history = client.get(f'/api/doctor/patients/{patient_id}/messages').get_json()['messages']
+    assert [message['senderRole'] for message in history] == ['patient', 'doctor', 'patient']
+    assert history[0]['author'] == 'Ковалёва Нина Петровна'
+
+    sent = client.post(f'/api/doctor/patients/{patient_id}/messages',
+                       json={'body': 'Повторите замер через 15 минут.'})
+    assert sent.status_code == 201
+    assert sent.get_json()['mine'] is True and sent.get_json()['author'] == 'Смирнова Елена Андреевна'
+
+    assert client.post(f'/api/doctor/patients/{patient_id}/messages', json={'body': '   '}).status_code == 400
+    assert len(client.get(f'/api/doctor/patients/{patient_id}/messages').get_json()['messages']) == 4
+
+    with db_cursor() as cur:
+        cur.execute("SELECT count(*) AS n FROM audit_log WHERE action = 'message_sent'")
+        assert cur.fetchone()['n'] == 1
+
+
+def test_patient_alert_log(client, demo):
+    login(client, 'doctor@demo.ru')
+    patient_id = worklist(client)['Ковалёва Нина Петровна']['id']
+    alerts = client.get(f'/api/doctor/patients/{patient_id}/alerts').get_json()['alerts']
+
+    assert len(alerts) == 3
+    assert (alerts[0]['level'], alerts[0]['value'], alerts[0]['unit']) == ('crit', '2,9', 'ммоль/л')
+    assert alerts[0]['acceptedAt'] is None
+    assert alerts[0]['relativeSmsAt'] is not None
+    assert alerts[1]['acceptedBy'] == 'Смирнова Е. А.'
+    assert alerts[2]['level'] == 'crit'

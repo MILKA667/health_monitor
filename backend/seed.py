@@ -20,6 +20,24 @@ CLINIC = 'Городская поликлиника № 3'
 
 DEVICE_MODELS = {'glucometer': '[модель глюкометра]', 'tonometer': '[модель тонометра]'}
 
+# Назначения по нозологии: (название, схема, [(время, что принять)])
+MEDICATIONS = {
+    'diabetes': [('Метформин 1000 мг', '2 раза в день, после еды',
+                  [('09:00', '1 таблетка после завтрака'), ('19:00', '1 таблетка после ужина')])],
+    'hypertension': [('Лизиноприл 10 мг', '1 раз в день, утром', [('08:00', '1 таблетка утром')])],
+    'asthma': [('Будесонид 200 мкг', '2 раза в день, ингаляции',
+                [('08:00', '1 ингаляция утром'), ('21:00', '1 ингаляция вечером')])],
+}
+ADHERENCE_DAYS = 14
+
+# Переписка врача с пациенткой из первого примера: (телефон, кто пишет, минут назад, текст)
+MESSAGES = [
+    ('79000000102', 'patient', 65, 'Голова кружится, руки дрожат. Глюкометр показал 2,9.'),
+    ('79000000102', 'doctor', 63, 'Нина Петровна, примите 15–20 г быстрых углеводов: '
+                                  'стакан сока или 4 таблетки глюкозы. Через 15 минут повторите замер.'),
+    ('79000000102', 'patient', 61, 'Выпила сок. Жду.'),
+]
+
 # Измерения: (сколько минут назад, значение, второе значение, источник)
 PATIENTS = [
     {'name': 'Ковалёва Нина Петровна', 'phone': '79000000102', 'age': 67, 'sex': 'ж', 'nosology': 'diabetes',
@@ -95,9 +113,17 @@ def seed_patient(cur, doctor_id, data, now):
     cur.execute('SELECT * FROM patients WHERE user_id = %s', (patient_id,))
     patient = cur.fetchone()
 
+    cur.execute('SELECT 1 FROM consents WHERE user_id = %s LIMIT 1', (patient_id,))
+    if not cur.fetchone() and not data.get('temporary'):
+        # Учётки, созданные клиникой, согласия ещё не давали — их пациент подписывает при первом входе
+        cur.executemany(
+            'INSERT INTO consents (user_id, kind, given_at) VALUES (%s, %s, %s)',
+            [(patient_id, 'personal_data', patient['enrolled_at']),
+             (patient_id, 'no_diagnosis', patient['enrolled_at'])],
+        )
     cur.execute('SELECT 1 FROM measurements WHERE patient_id = %s LIMIT 1', (patient_id,))
     if cur.fetchone():
-        return  # измерения уже есть — повторный запуск ничего не дублирует
+        return patient_id  # измерения уже есть — повторный запуск ничего не дублирует
 
     if data.get('contact'):
         cur.execute(
@@ -115,10 +141,13 @@ def seed_patient(cur, doctor_id, data, now):
         device_id = cur.fetchone()['id']
 
     kind = {'diabetes': 'glucose', 'hypertension': 'bp', 'asthma': 'pef'}[data['nosology']]
+    # Контекст замера: натощак → перед сном → через 2 часа после еды
+    contexts = data.get('contexts', ['fast', 'night', 'after', 'fast'])
     alerts = []
-    for minutes_ago, value, value2, source in reversed(data['measurements']):
+    for index, (minutes_ago, value, value2, source) in enumerate(reversed(data['measurements'])):
         _, alert = record_measurement(cur, patient, kind, value, value2, source,
                                       device_id if source == 'device' else None,
+                                      context=contexts[index % len(contexts)],
                                       measured_at=now - timedelta(minutes=minutes_ago))
         if alert:
             alerts.append(alert)
@@ -128,6 +157,53 @@ def seed_patient(cur, doctor_id, data, now):
         cur.execute(
             'UPDATE alerts SET accepted_at = created_at + interval %s, accepted_by = %s WHERE id = %s',
             ('6 minutes' if alert['level'] == 'crit' else '22 minutes', doctor_id, alert['id']),
+        )
+    return patient_id
+
+
+def seed_medications(cur, patient_id, nosology, now):
+    """Назначения и отметки о приёме за последние 14 дней (26 из 28 — с двумя пропусками)."""
+    cur.execute('SELECT 1 FROM medications WHERE patient_id = %s LIMIT 1', (patient_id,))
+    if cur.fetchone():
+        return
+    for name, schedule, slots in MEDICATIONS[nosology]:
+        cur.execute(
+            """INSERT INTO medications (patient_id, name, schedule, prescribed_at)
+               VALUES (%s, %s, %s, %s) RETURNING id""",
+            (patient_id, name, schedule, (now - timedelta(days=40)).date()),
+        )
+        medication_id = cur.fetchone()['id']
+        for slot_number, (time_text, dose) in enumerate(slots, start=1):
+            cur.execute(
+                """INSERT INTO medication_slots (medication_id, time_of_day, dose)
+                   VALUES (%s, %s, %s) RETURNING id""",
+                (medication_id, time_text, dose),
+            )
+            slot_id = cur.fetchone()['id']
+            for day_offset in range(ADHERENCE_DAYS):
+                if (day_offset + slot_number) % 13 == 0:
+                    continue  # пропущенный приём
+                taken_at = now - timedelta(days=day_offset, minutes=20 * (slot_number - 1))
+                cur.execute(
+                    'INSERT INTO medication_intakes (slot_id, taken_on, taken_at) VALUES (%s, %s, %s)',
+                    (slot_id, taken_at.date(), taken_at),
+                )
+
+
+def seed_messages(cur, patient_id, doctor_id, now):
+    """Переписка из демонстрационного сценария: пациентка жалуется, врач отвечает."""
+    cur.execute('SELECT 1 FROM messages WHERE patient_id = %s LIMIT 1', (patient_id,))
+    if cur.fetchone():
+        return
+    cur.execute('SELECT phone FROM users WHERE id = %s', (patient_id,))
+    phone = cur.fetchone()['phone']
+    for patient_phone, author, minutes_ago, text in MESSAGES:
+        if patient_phone != phone:
+            continue
+        cur.execute(
+            'INSERT INTO messages (patient_id, sender_id, body, created_at, read_at) VALUES (%s, %s, %s, %s, %s)',
+            (patient_id, patient_id if author == 'patient' else doctor_id, text,
+             now - timedelta(minutes=minutes_ago), now),
         )
 
 
@@ -150,7 +226,9 @@ def seed_demo():
             doctor_ids.append(doctor_id)
 
         for data in PATIENTS:
-            seed_patient(cur, doctor_ids[0], data, now)
+            patient_id = seed_patient(cur, doctor_ids[0], data, now)
+            seed_medications(cur, patient_id, data['nosology'], now)
+            seed_messages(cur, patient_id, doctor_ids[0], now)
 
     click.echo(f'Готово. Пароль врачей, администратора и пациентов: {DEMO_PASSWORD}; '
                f'пациентка +7 900 000-01-01 входит по временному паролю {TEMP_PASSWORD}.')

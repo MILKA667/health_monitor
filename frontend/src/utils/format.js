@@ -65,6 +65,18 @@ export function formatAge(age) {
   return `${age} ${plural(age, 'г.', 'г.', 'л.')}`
 }
 
+// 02.10.2026
+export function formatDate(iso) {
+  if (!iso) return '—'
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T00:00:00`) : new Date(iso)
+  return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()}`
+}
+
+// Сколько минут прошло между двумя моментами
+export function minutesBetween(fromIso, toIso) {
+  return Math.max(0, Math.round((new Date(toIso) - new Date(fromIso)) / 60000))
+}
+
 export function daysSince(iso) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
 }

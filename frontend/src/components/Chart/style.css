@@ -1,0 +1,68 @@
+.chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart__band {
+  fill: var(--surface-sub);
+}
+
+.chart__grid {
+  stroke: var(--border-row);
+}
+
+.chart__tick,
+.chart__x {
+  fill: var(--text-3);
+  font: 11px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart__guide {
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.chart__guide--crit {
+  stroke: var(--crit);
+}
+
+.chart__guide--warn {
+  stroke: var(--warn-marker);
+}
+
+.chart__guide-label {
+  font: 11px var(--font-mono);
+}
+
+.chart__guide-label--crit {
+  fill: var(--crit);
+}
+
+.chart__guide-label--warn {
+  fill: var(--warn-text);
+}
+
+.chart__line {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.chart__dot--crit {
+  fill: var(--crit);
+}
+
+.chart__dot--warn {
+  fill: var(--warn-marker);
+}
+
+.chart__dot--ok {
+  fill: var(--text);
+}
+
+.chart__empty {
+  padding: var(--s-6) var(--s-4);
+}

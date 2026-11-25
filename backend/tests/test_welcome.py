@@ -51,7 +51,7 @@ def test_complete(client, demo):
     me = client.get('/api/auth/me').get_json()
     assert me['mustChangePassword'] is False
     with db_cursor() as cur:
-        cur.execute('SELECT kind FROM consents ORDER BY id')
+        cur.execute('SELECT kind FROM consents WHERE user_id = %s ORDER BY id', (me['id'],))
         assert [row['kind'] for row in cur.fetchall()] == ['personal_data', 'no_diagnosis', 'relative_sms']
         cur.execute('SELECT phone FROM patient_contacts WHERE patient_id = %s', (me['id'],))
         assert cur.fetchone()['phone'] == '79012223344'
