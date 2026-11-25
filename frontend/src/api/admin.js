@@ -27,6 +27,16 @@ export function setUserBlocked(userId, blocked) {
   return request(`/admin/users/${userId}/block`, { method: 'POST', body: { blocked } })
 }
 
+// Новый временный пароль: возвращается один раз для показа администратору
+export function resetUserPassword(userId) {
+  return request(`/admin/users/${userId}/reset-password`, { method: 'POST' })
+}
+
+// Удаление аккаунта: вход запрещён, контакты очищаются, медданные остаются
+export function deleteUser(userId) {
+  return request(`/admin/users/${userId}/delete`, { method: 'POST' })
+}
+
 export function getAudit(type = 'all') {
   return request(`/admin/audit?type=${type}`)
 }

@@ -1,11 +1,11 @@
 """Демонстрационные данные для разработки: `flask --app app seed-demo`."""
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import click
 from flask.cli import with_appcontext
 from werkzeug.security import generate_password_hash
 
-from db import db_cursor
+from db import APP_TIMEZONE, db_cursor, today as app_today
 from monitoring import record_measurement
 
 DEMO_PASSWORD = 'demo1234'
@@ -95,7 +95,7 @@ def upsert_user(cur, role, name, phone, email, password, temporary=False):
 
 
 def birth_date(years):
-    today = date.today()
+    today = app_today()
     return today.replace(year=today.year - years) - timedelta(days=40)
 
 
@@ -108,7 +108,7 @@ def seed_patient(cur, doctor_id, data, now):
            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
            ON CONFLICT (user_id) DO NOTHING""",
         (patient_id, doctor_id, birth_date(data['age']), data['sex'], data['nosology'], data['diagnosis'],
-         data['icd'], data['policy'], date.today() - timedelta(days=90), data.get('pef_best')),
+         data['icd'], data['policy'], app_today() - timedelta(days=90), data.get('pef_best')),
     )
     cur.execute('SELECT * FROM patients WHERE user_id = %s', (patient_id,))
     patient = cur.fetchone()
@@ -232,7 +232,7 @@ def seed_reminders(cur, patient_id, nosology):
 @with_appcontext
 def seed_demo():
     """Создаёт демо-врачей, пациентов с измерениями и администратора (повторный запуск безопасен)."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(APP_TIMEZONE)
     with db_cursor() as cur:
         upsert_user(cur, 'admin', 'Администратор клиники', '79000000000', 'admin@demo.ru', DEMO_PASSWORD)
 

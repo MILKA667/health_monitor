@@ -6,7 +6,7 @@ from flask import Blueprint, jsonify, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import chat
-from db import audit, db_cursor
+from db import audit, db_cursor, today as app_today
 from doctor import chart_payload, stats_payload
 from monitoring import (NOSOLOGY_KIND, UNITS, evaluate, fmt_number, fmt_value, load_thresholds, record_measurement,
                         target_text)
@@ -46,13 +46,13 @@ def measurement_card(row, thresholds, patient):
         'deviation': deviation,
         'context': CONTEXT_TITLES.get(row['context'], ''),
         'measuredAt': iso(row['measured_at']),
-        'isToday': row['measured_at'].date() == date.today(),
+        'isToday': row['measured_at'].date() == app_today(),
     }
 
 
 def plan_items(cur, patient):
     """План на сегодня: приёмы лекарств и замеры с отметками о выполнении."""
-    today = date.today()
+    today = app_today()
     items = []
     cur.execute(
         """SELECT s.id, s.time_of_day, s.dose, m.name FROM medication_slots s
@@ -152,11 +152,11 @@ def toggle_intake(slot_id):
         if done:
             cur.execute(
                 'INSERT INTO medication_intakes (slot_id, taken_on) VALUES (%s, %s) ON CONFLICT DO NOTHING',
-                (slot_id, date.today()),
+                (slot_id, app_today()),
             )
         else:
             cur.execute('DELETE FROM medication_intakes WHERE slot_id = %s AND taken_on = %s',
-                        (slot_id, date.today()))
+                        (slot_id, app_today()))
         audit(cur, 'medication_intake', patient['user_id'], f'slot:{slot_id}', request.remote_addr)
     return jsonify({'done': done})
 

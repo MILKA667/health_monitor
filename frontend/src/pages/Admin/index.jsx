@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 import {
   approveApplication,
+  deleteUser,
   getApplications,
   getAudit,
   getUsers,
   rejectApplication,
+  resetUserPassword,
   revertApplication,
   setUserBlocked,
 } from '../../api/admin'
@@ -52,6 +54,7 @@ function Admin() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [resetInfo, setResetInfo] = useState(null)
 
   const loadApps = useCallback(() => {
     return getApplications()
@@ -154,6 +157,31 @@ function Admin() {
     try {
       await setUserBlocked(user.id, !user.blocked)
       setUsers((current) => current.map((item) => (item.id === user.id ? { ...item, blocked: !user.blocked } : item)))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function resetPassword(user) {
+    setError('')
+    setResetInfo(null)
+    try {
+      setResetInfo(await resetUserPassword(user.id))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function removeUser(user) {
+    const confirmed = window.confirm(
+      `Удалить аккаунт «${user.name}»? Вход станет невозможен, контакты будут очищены. `
+      + 'Медицинские данные и журнал аудита сохранятся.',
+    )
+    if (!confirmed) return
+    setError('')
+    try {
+      await deleteUser(user.id)
+      setUsers((current) => current.filter((item) => item.id !== user.id))
     } catch (err) {
       setError(err.message)
     }
@@ -363,6 +391,26 @@ function Admin() {
               </label>
               {users && <span className="admin-sub">Показано {users.length}</span>}
             </div>
+            {resetInfo && (
+              <section className="panel admin-reset" role="status">
+                <div className="admin-reset__text">
+                  <span className="admin-reset__title">Новый временный пароль</span>
+                  <span>
+                    Логин: {resetInfo.login} · пароль:{' '}
+                    <code className="num admin-reset__code">{resetInfo.password}</code>
+                  </span>
+                  <span className="admin-sub">
+                    Показывается один раз. Пароль также отправлен SMS; после входа пользователь может сменить его.
+                  </span>
+                </div>
+                <div className="admin-actions">
+                  <Button size="sm" onClick={() => navigator.clipboard?.writeText(resetInfo.password)}>
+                    Скопировать
+                  </Button>
+                  <Button size="sm" onClick={() => setResetInfo(null)}>Скрыть</Button>
+                </div>
+              </section>
+            )}
             <section className="panel admin-panel" aria-label="Пользователи">
               <div className="admin-scroll">
                 <table className="data-table admin-table">
@@ -388,9 +436,17 @@ function Admin() {
                         </td>
                         <td className="num admin-sub">{user.lastLogin ? formatDayTime(user.lastLogin) : '—'}</td>
                         <td>
-                          <Button size="sm" disabled={user.isSelf} onClick={() => toggleBlock(user)}>
-                            {user.blocked ? 'Разблокировать' : 'Заблокировать'}
-                          </Button>
+                          <div className="admin-user-actions">
+                            <Button size="sm" disabled={user.isSelf} onClick={() => toggleBlock(user)}>
+                              {user.blocked ? 'Разблокировать' : 'Заблокировать'}
+                            </Button>
+                            <Button size="sm" disabled={user.isSelf} onClick={() => resetPassword(user)}>
+                              Сбросить пароль
+                            </Button>
+                            <Button variant="danger" size="sm" disabled={user.isSelf} onClick={() => removeUser(user)}>
+                              Удалить
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}

@@ -3,7 +3,7 @@ from datetime import date, timedelta
 
 from flask import Blueprint, jsonify, request
 
-from db import audit, db_cursor
+from db import audit, db_cursor, today as app_today
 from doctor import CONTEXT_LABEL, DEVICE_LABEL, stats_payload, thresholds_payload
 from monitoring import UNITS, evaluate, fmt_number, fmt_value, load_thresholds
 from security import current_user, error, login_required, short_name
@@ -205,7 +205,7 @@ def patient_alerts(cur, patient_id, days):
 
 
 def patient_meds(cur, patient_id, days):
-    start = date.today() - timedelta(days=days - 1)
+    start = app_today() - timedelta(days=days - 1)
     cur.execute('SELECT * FROM medications WHERE patient_id = %s ORDER BY prescribed_at, id', (patient_id,))
     result = []
     for medication in cur.fetchall():
@@ -219,7 +219,7 @@ def patient_meds(cur, patient_id, days):
         )
         taken = cur.fetchone()['taken']
         window_start = max(start, medication['prescribed_at'])
-        expected = ((date.today() - window_start).days + 1) * slots if window_start <= date.today() else 0
+        expected = ((app_today() - window_start).days + 1) * slots if window_start <= app_today() else 0
         result.append({
             'name': medication['name'],
             'schedule': medication['schedule'],

@@ -157,6 +157,40 @@
   white-space: nowrap;
 }
 
+.admin-reset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-left: 4px solid var(--primary);
+}
+
+.admin-reset__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-reset__title {
+  font-weight: 600;
+}
+
+.admin-reset__code {
+  padding: 1px 6px;
+  border-radius: var(--r-control);
+  background: var(--surface-sub);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.admin-user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 @media (max-width: 700px) {
   .admin-header,
   .admin-main {

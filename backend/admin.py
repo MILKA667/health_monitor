@@ -24,6 +24,8 @@ ACTION_LABELS = {
     'user_created': 'Создана учётная запись',
     'user_blocked': 'Учётная запись заблокирована',
     'user_unblocked': 'Учётная запись разблокирована',
+    'user_deleted': 'Учётная запись удалена',
+    'password_reset_by_admin': 'Пароль сброшен администратором',
     'application_submitted': 'Подана заявка на доступ',
     'applications_viewed': 'Открыт список заявок',
     'application_approved': 'Заявка одобрена',
@@ -64,9 +66,9 @@ ACTION_GROUPS = {
              'report_viewed', 'report_created', 'alert_accepted', 'alert_accept_undone'],
     'account': ['login', 'logout', 'user_created', 'user_blocked', 'user_unblocked', 'application_submitted',
                 'application_approved', 'application_rejected', 'application_reverted', 'first_login_completed',
-                'thresholds_saved', 'applications_viewed'],
+                'thresholds_saved', 'applications_viewed', 'user_deleted'],
     'security': ['login_failed', 'login_blocked', 'password_reset', 'password_changed', 'recover_code_sent',
-                 'recover_code_failed', 'recover_code_ok', 'recover_unknown'],
+                 'recover_code_failed', 'recover_code_ok', 'recover_unknown', 'password_reset_by_admin'],
     'notifications': ['message_sent', 'relative_notifications'],
 }
 SECURITY_ACTIONS = set(ACTION_GROUPS['security'])
@@ -237,10 +239,14 @@ def approve(application_id):
 
         # Повторное одобрение после отмены решения: возвращаем доступ, новую учётку не создаём
         if application['approved_user_id']:
+            cur.execute('SELECT deleted_at FROM users WHERE id = %s', (application['approved_user_id'],))
+            approved_user = cur.fetchone()
+            if not approved_user:
+                return error('Учётная запись заявки не найдена.', 404)
+            if approved_user['deleted_at']:
+                return error('Учётная запись по этой заявке удалена. Заявку нужно подать заново.', 409)
             cur.execute('UPDATE users SET is_blocked = FALSE WHERE id = %s RETURNING id',
                         (application['approved_user_id'],))
-            if not cur.fetchone():
-                return error('Учётная запись заявки не найдена.', 404)
             user_id = application['approved_user_id']
             password = None
         else:
@@ -306,6 +312,7 @@ def users():
                         WHERE a.user_id = u.id AND a.action = 'login') AS last_login
                FROM users u
                WHERE (%s = 'all' OR u.role = %s)
+                 AND u.deleted_at IS NULL
                  AND (%s = '' OR u.name ILIKE %s OR coalesce(u.email, '') ILIKE %s OR coalesce(u.phone, '') LIKE %s)
                ORDER BY u.name LIMIT 300""",
             (role, role, search, f'%{search}%', f'%{search}%', f'%{search}%'),
@@ -343,6 +350,62 @@ def block_user(user_id):
         audit(cur, 'user_blocked' if blocked else 'user_unblocked', admin['id'], f'user:{user_id}',
               request.remote_addr, is_security=True)
     return jsonify({'blocked': blocked})
+
+
+@bp.post('/users/<int:user_id>/reset-password')
+@login_required('admin')
+def reset_user_password(user_id):
+    """Выдаёт новый временный пароль: показывается администратору один раз и уходит SMS."""
+    admin = current_user()
+    if user_id == admin['id']:
+        return error('Свой пароль меняйте через восстановление доступа.')
+    with db_cursor() as cur:
+        cur.execute('SELECT * FROM users WHERE id = %s AND deleted_at IS NULL FOR UPDATE', (user_id,))
+        user = cur.fetchone()
+        if not user:
+            return error('Пользователь не найден.', 404)
+        password = temp_password()
+        cur.execute(
+            """UPDATE users SET password_hash = %s, must_change_password = FALSE,
+                      password_changed_at = now(), session_version = session_version + 1
+               WHERE id = %s""",
+            (generate_password_hash(password), user_id),
+        )
+        if user['phone']:
+            send_sms(cur, user['phone'],
+                     f'HealthMonitor: новый временный пароль: {password}. Смените его после входа.')
+        audit(cur, 'password_reset_by_admin', admin['id'], f'user:{user_id}', request.remote_addr,
+              is_security=True)
+    return jsonify({
+        'password': password,
+        'login': mask_phone(user['phone']) if user['phone'] else user['email'],
+    })
+
+
+@bp.post('/users/<int:user_id>/delete')
+@login_required('admin')
+def delete_user(user_id):
+    """Удаление аккаунта: вход запрещён, контакты и имя очищаются, медданные и аудит остаются."""
+    admin = current_user()
+    if user_id == admin['id']:
+        return error('Нельзя удалить самого себя.')
+    with db_cursor() as cur:
+        cur.execute('SELECT role, deleted_at FROM users WHERE id = %s FOR UPDATE', (user_id,))
+        row = cur.fetchone()
+        if not row or row['deleted_at']:
+            return error('Пользователь не найден.', 404)
+        if row['role'] == 'admin':
+            cur.execute("SELECT count(*) AS n FROM users WHERE role = 'admin' AND NOT is_blocked AND deleted_at IS NULL")
+            if cur.fetchone()['n'] <= 1:
+                return error('Нельзя удалить последнего администратора.')
+        cur.execute(
+            """UPDATE users SET deleted_at = now(), is_blocked = TRUE, phone = NULL, email = NULL,
+                      name = 'Удалённая учётная запись', session_version = session_version + 1
+               WHERE id = %s""",
+            (user_id,),
+        )
+        audit(cur, 'user_deleted', admin['id'], f'user:{user_id}', request.remote_addr, is_security=True)
+    return jsonify({'ok': True})
 
 
 @bp.get('/audit')
