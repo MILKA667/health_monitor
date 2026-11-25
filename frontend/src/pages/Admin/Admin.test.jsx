@@ -1,0 +1,135 @@
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import Admin from '.'
+
+vi.mock('../../api/admin', () => ({
+  getApplications: vi.fn(),
+  approveApplication: vi.fn(),
+  rejectApplication: vi.fn(),
+  revertApplication: vi.fn(),
+  getUsers: vi.fn(),
+  setUserBlocked: vi.fn(),
+  getAudit: vi.fn(),
+}))
+vi.mock('../../api/auth', () => ({ getMe: vi.fn(), logout: vi.fn() }))
+const api = await import('../../api/admin')
+const auth = await import('../../api/auth')
+
+const APPS = {
+  applications: [
+    {
+      id: 3, role: 'patient', roleLabel: 'Пациент', name: 'Тихонов Глеб Аркадьевич',
+      phoneMasked: '+7 ••• ••• 07 77', email: 'g.tikhonov@mail.ru', extra: '',
+      createdAt: '2026-11-25T12:00:00+03:00', decidedAt: null, status: 'pending', consentGiven: true,
+    },
+    {
+      id: 2, role: 'relative', roleLabel: 'Родственник', name: 'Савельева Марина Викторовна',
+      phoneMasked: '+7 ••• ••• 01 03', email: null, extra: 'Савельев Игорь Андреевич',
+      createdAt: '2026-11-25T11:00:00+03:00', decidedAt: null, status: 'pending', consentGiven: false,
+    },
+    {
+      id: 1, role: 'doctor', roleLabel: 'Врач', name: 'Гусев Роман Ильич',
+      phoneMasked: '+7 ••• ••• 05 01', email: 'r.gusev@clinic.ru', extra: 'пульмонолог',
+      createdAt: '2026-11-24T10:00:00+03:00', decidedAt: '2026-11-24T11:00:00+03:00', status: 'approved',
+      consentGiven: true,
+    },
+  ],
+  doctors: [{ id: 2, label: 'Смирнова Е. А.' }],
+  patients: [{ id: 4, label: 'Ковалёва Н. П.' }],
+  roles: [{ id: 'patient', label: 'Пациент' }],
+  nosologies: [{ id: 'diabetes', label: 'Сахарный диабет' }],
+  sexes: [{ id: 'м', label: 'мужской' }],
+}
+
+const USERS = {
+  users: [
+    { id: 4, name: 'Ковалёва Нина Петровна', role: 'patient', roleLabel: 'Пациент',
+      contact: '+7 ••• ••• 01 02', blocked: false, isSelf: false, lastLogin: '2026-11-25T10:00:00+03:00' },
+    { id: 1, name: 'Администратор клиники', role: 'admin', roleLabel: 'Администратор',
+      contact: 'admin@demo.ru', blocked: false, isSelf: true, lastLogin: null },
+  ],
+}
+
+const AUDIT = {
+  groups: [
+    { id: 'all', label: 'Все события' },
+    { id: 'security', label: 'Безопасность' },
+  ],
+  events: [
+    { id: 1, createdAt: '2026-11-25T10:00:00+03:00', who: 'Система', action: 'Неудачная попытка входа',
+      object: null, ip: '10.0.0.1', security: true },
+  ],
+}
+
+function renderAdmin() {
+  render(
+    <MemoryRouter>
+      <Admin />
+    </MemoryRouter>,
+  )
+}
+
+describe('Admin', () => {
+  beforeEach(() => {
+    Object.values(api).forEach((fn) => fn.mockReset())
+    Object.values(auth).forEach((fn) => fn.mockReset())
+    auth.getMe.mockResolvedValue({ id: 1, role: 'admin', name: 'Администратор клиники', shortName: 'Администратор К.', mustChangePassword: false })
+    api.getApplications.mockResolvedValue(APPS)
+    api.getUsers.mockResolvedValue(USERS)
+    api.getAudit.mockResolvedValue(AUDIT)
+  })
+
+  it('показывает заявки и блокирует одобрение без согласий', async () => {
+    renderAdmin()
+    expect(await screen.findByRole('tab', { name: 'Заявки · 2' })).toBeInTheDocument()
+    const row = screen.getByText('Савельева Марина Викторовна').closest('tr')
+    expect(within(row).getByText('согласия не получены · Савельев Игорь Андреевич')).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Одобрить' })).toBeDisabled()
+    expect(screen.getByText(/Одобрено/)).toBeInTheDocument()
+  })
+
+  it('одобряет заявку пациента с картой', async () => {
+    api.approveApplication.mockResolvedValue({ ok: true, userId: 20 })
+    renderAdmin()
+
+    const row = (await screen.findByText('Тихонов Глеб Аркадьевич')).closest('tr')
+    await userEvent.click(within(row).getByRole('button', { name: 'Одобрить' }))
+
+    await userEvent.type(screen.getByLabelText('Дата рождения'), '1980-05-12')
+    await userEvent.type(screen.getByLabelText('Диагноз'), 'Сахарный диабет 2 типа')
+    await userEvent.type(screen.getByLabelText('Код МКБ'), 'E11.9')
+    await userEvent.click(screen.getByRole('button', { name: 'Подтвердить' }))
+
+    expect(api.approveApplication).toHaveBeenCalledWith(3, expect.objectContaining({
+      doctorId: 2, birthDate: '1980-05-12', sex: 'м', nosology: 'diabetes',
+      diagnosis: 'Сахарный диабет 2 типа', icdCode: 'E11.9',
+    }))
+  })
+
+  it('ищет пользователей и блокирует доступ', async () => {
+    api.setUserBlocked.mockResolvedValue({ blocked: true })
+    renderAdmin()
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'Пользователи' }))
+    expect(await screen.findByText('Ковалёва Нина Петровна')).toBeInTheDocument()
+    const row = screen.getByText('Ковалёва Нина Петровна').closest('tr')
+    const block = within(row).getByRole('button', { name: 'Заблокировать' })
+    expect(block).toBeEnabled()
+
+    await userEvent.click(block)
+    expect(api.setUserBlocked).toHaveBeenCalledWith(4, true)
+
+    await userEvent.type(screen.getByPlaceholderText('ФИО, телефон или e-mail'), 'Кова')
+    expect(api.getUsers).toHaveBeenLastCalledWith({ search: 'Кова', role: 'all' })
+  })
+
+  it('фильтрует журнал аудита', async () => {
+    renderAdmin()
+    await userEvent.click(await screen.findByRole('tab', { name: 'Журнал аудита' }))
+    expect(await screen.findByText('Неудачная попытка входа')).toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByLabelText('Тип события'), 'security')
+    expect(api.getAudit).toHaveBeenLastCalledWith('security')
+  })
+})

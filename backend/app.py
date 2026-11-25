@@ -9,6 +9,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+import admin
 import auth
 import dialogs
 import doctor
@@ -45,6 +46,7 @@ app.register_blueprint(dialogs.bp)
 app.register_blueprint(reports.bp)
 app.register_blueprint(patient.bp)
 app.register_blueprint(relative.bp)
+app.register_blueprint(admin.bp)
 app.cli.add_command(seed.seed_demo)
 
 

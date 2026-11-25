@@ -261,5 +261,19 @@ def seed_demo():
             (relative_id, patient_ids['79000000102']),
         )
 
+        # Заявки для админки: одна на каждую роль, все ещё на рассмотрении
+        cur.execute('SELECT 1 FROM applications LIMIT 1')
+        if not cur.fetchone():
+            cur.executemany(
+                """INSERT INTO applications (role, name, phone, email, extra, consent_personal_data, consent_no_diagnosis)
+                   VALUES (%s, %s, %s, %s, %s, TRUE, TRUE)""",
+                [
+                    ('doctor', 'Гусев Роман Ильич', '79000000501', 'r.gusev@clinic.ru',
+                     'пульмонолог, Городская поликлиника № 3'),
+                    ('relative', 'Савельева Марина Викторовна', '79010000103', None, 'Савельев Игорь Андреевич'),
+                    ('patient', 'Тихонов Глеб Аркадьевич', '79000000777', 'g.tikhonov@mail.ru', ''),
+                ],
+            )
+
     click.echo(f'Готово. Пароль врачей, администратора и пациентов: {DEMO_PASSWORD}; '
                f'пациентка +7 900 000-01-01 входит по временному паролю {TEMP_PASSWORD}.')

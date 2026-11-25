@@ -27,6 +27,10 @@ CREATE TABLE IF NOT EXISTS applications (
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Решение администратора: какая учётная запись создана и когда
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS approved_user_id INTEGER REFERENCES users (id);
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ;
+
 -- Журнал аудита неизменяем: только INSERT
 CREATE TABLE IF NOT EXISTS audit_log (
     id          SERIAL PRIMARY KEY,

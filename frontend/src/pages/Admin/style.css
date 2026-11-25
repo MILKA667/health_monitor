@@ -1,0 +1,166 @@
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.admin-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-6);
+  padding: 0 var(--page-x);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.admin-header__brand {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.admin-header .text-tabs {
+  flex-grow: 1;
+}
+
+.admin-header__user {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.admin-header__logout {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.admin-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--page-x) var(--s-8);
+}
+
+.admin-main .form-error {
+  padding: 0;
+}
+
+.admin-note {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.admin-panel {
+  overflow: hidden;
+}
+
+.admin-scroll {
+  overflow-x: auto;
+}
+
+.admin-table {
+  min-width: 860px;
+}
+
+.admin-table--audit {
+  min-width: 900px;
+  font-size: 13px;
+}
+
+.admin-name {
+  display: block;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.admin-sub {
+  display: block;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.admin-bad {
+  color: var(--crit);
+  font-weight: 500;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+}
+
+.admin-decision {
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.admin-filters input[type='search'] {
+  width: 240px;
+}
+
+.admin-filters .admin-sub {
+  margin-left: auto;
+}
+
+.admin-empty {
+  padding: var(--s-4);
+  color: var(--text-2);
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+}
+
+.admin-form h2 {
+  font: var(--t-section);
+}
+
+.admin-form__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 180px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.admin-field--wide {
+  flex: 1 1 260px;
+}
+
+.admin-nowrap {
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .admin-header,
+  .admin-main {
+    padding-right: var(--page-x-mobile);
+    padding-left: var(--page-x-mobile);
+  }
+}
