@@ -157,3 +157,77 @@ def test_audit_groups(client, make_client, demo):
     assert events[0]['action'] == 'Неудачная попытка входа'
     assert events[0]['security'] is True
     assert {group['id'] for group in security['groups']} == {'all', 'data', 'account', 'security', 'notifications'}
+
+
+def find_user(client, search):
+    return client.get(f'/api/admin/users?search={search}').get_json()['users'][0]
+
+
+def test_reset_password_by_admin(client, make_client, demo):
+    login(client, 'admin@demo.ru')
+    user = find_user(client, 'Ковалёва')
+    other = make_client()
+    login(other, '+79000000102')
+
+    response = client.post(f"/api/admin/users/{user['id']}/reset-password")
+    assert response.status_code == 200
+    password = response.get_json()['password']
+    assert re.fullmatch(r'[A-Za-z0-9]{10}', password)
+
+    # Старые сеансы завершены, старый пароль больше не работает
+    assert other.get('/api/patient/home').status_code == 401
+    assert make_client().post('/api/auth/login', json={
+        'login': '+79000000102', 'password': 'demo1234'}).status_code == 401
+
+    patient = make_client()
+    assert login(patient, '+79000000102', password)['role'] == 'patient'
+    assert patient.get('/api/patient/home').status_code == 200
+
+    me = find_user(client, 'Администратор клиники')
+    assert client.post(f"/api/admin/users/{me['id']}/reset-password").status_code == 400
+
+    with db_cursor() as cur:
+        cur.execute("SELECT count(*) AS n FROM audit_log WHERE action = 'password_reset_by_admin'")
+        assert cur.fetchone()['n'] == 1
+
+
+def test_delete_user(client, make_client, demo):
+    login(client, 'admin@demo.ru')
+    user = find_user(client, 'Савельев')
+    other = make_client()
+    login(other, '+79000000103')
+
+    assert client.post(f"/api/admin/users/{user['id']}/delete").status_code == 200
+    assert other.get('/api/patient/home').status_code == 401
+    assert make_client().post('/api/auth/login', json={
+        'login': '+79000000103', 'password': 'demo1234'}).status_code == 401
+
+    with db_cursor() as cur:
+        cur.execute('SELECT name, phone, email, is_blocked, deleted_at FROM users WHERE id = %s', (user['id'],))
+        row = cur.fetchone()
+        assert row['name'] == 'Удалённая учётная запись'
+        assert row['phone'] is None and row['email'] is None
+        assert row['is_blocked'] is True and row['deleted_at'] is not None
+
+    assert all(item['id'] != user['id'] for item in client.get('/api/admin/users').get_json()['users'])
+
+    me = find_user(client, 'Администратор клиники')
+    assert client.post(f"/api/admin/users/{me['id']}/delete").status_code == 400
+
+    with db_cursor() as cur:
+        cur.execute("SELECT count(*) AS n FROM audit_log WHERE action = 'user_deleted'")
+        assert cur.fetchone()['n'] == 1
+
+
+def test_deleted_account_cannot_be_reapproved(client, demo):
+    login(client, 'admin@demo.ru')
+    app_id = applications(client)['relative']['id']
+    created = client.post(f'/api/admin/applications/{app_id}/approve', json={'patientId': 4})
+    assert created.status_code == 200
+    user_id = created.get_json()['userId']
+
+    assert client.post(f'/api/admin/users/{user_id}/delete').status_code == 200
+    assert client.post(f'/api/admin/applications/{app_id}/revert').status_code == 200
+    response = client.post(f'/api/admin/applications/{app_id}/approve', json={'patientId': 4})
+    assert response.status_code == 409
+    assert 'удалена' in response.get_json()['error']

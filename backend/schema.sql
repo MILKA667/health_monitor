@@ -45,6 +45,12 @@ CREATE TABLE IF NOT EXISTS audit_log (
 -- Версия сеансов: увеличивается при смене пароля, старые cookie перестают действовать
 ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ NOT NULL DEFAULT now();
+-- Удаление учётной записи: вход запрещён, персональные контакты очищаются, медданные остаются
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
+-- У удалённой записи контактов может не быть
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_check;
+ALTER TABLE users ADD CONSTRAINT users_check CHECK (phone IS NOT NULL OR email IS NOT NULL OR deleted_at IS NOT NULL);
 
 CREATE TABLE IF NOT EXISTS doctors (
     user_id    INTEGER PRIMARY KEY REFERENCES users (id),

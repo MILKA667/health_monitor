@@ -1,9 +1,17 @@
 import os
 from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
+
+# Часовой пояс приложения: Москва — постоянный UTC+3, без перехода на летнее время
+APP_TIMEZONE = timezone(timedelta(hours=3), 'Europe/Moscow')
+
+
+def today():
+    return datetime.now(APP_TIMEZONE).date()
 
 
 def get_db_connection():
@@ -12,6 +20,7 @@ def get_db_connection():
         user=os.environ.get('DB_USER', 'admin'),
         password=os.environ.get('DB_PASSWORD', ''),
         host=os.environ.get('DB_HOST', 'localhost'),
+        options='-c timezone=Europe/Moscow',
     )
 
 

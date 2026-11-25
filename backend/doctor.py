@@ -5,7 +5,7 @@ import math
 from flask import Blueprint, jsonify, request
 
 import chat
-from db import audit, db_cursor
+from db import audit, db_cursor, today as app_today
 from monitoring import (LEVEL_ORDER, NO_DATA_DAYS, NOSOLOGY_KIND, THRESHOLD_FIELDS, UNITS, ensure_no_data_alerts,
                         evaluate, fmt_number, fmt_value, load_settings, load_thresholds, target_text)
 from security import current_user, error, login_required, mask_phone, short_name
@@ -448,7 +448,7 @@ def record(patient_id):
 @login_required('doctor')
 def medications(patient_id):
     """Приверженность за 14 дней: сколько приёмов отмечено из ожидаемых."""
-    start = date.today() - timedelta(days=ADHERENCE_DAYS - 1)
+    start = app_today() - timedelta(days=ADHERENCE_DAYS - 1)
     with db_cursor() as cur:
         if not own_patient(cur, patient_id):
             return error('Пациент не найден.', 404)
@@ -469,7 +469,7 @@ def medications(patient_id):
             )
             intake = cur.fetchone()
             window_start = max(start, medication['prescribed_at'])
-            days = (date.today() - window_start).days + 1 if window_start <= date.today() else 0
+            days = (app_today() - window_start).days + 1 if window_start <= app_today() else 0
             expected = days * len(slots)
             result.append({
                 'id': medication['id'],

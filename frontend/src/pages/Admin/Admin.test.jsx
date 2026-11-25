@@ -11,6 +11,8 @@ vi.mock('../../api/admin', () => ({
   revertApplication: vi.fn(),
   getUsers: vi.fn(),
   setUserBlocked: vi.fn(),
+  resetUserPassword: vi.fn(),
+  deleteUser: vi.fn(),
   getAudit: vi.fn(),
 }))
 vi.mock('../../api/auth', () => ({ getMe: vi.fn(), logout: vi.fn() }))
@@ -131,5 +133,33 @@ describe('Admin', () => {
     expect(await screen.findByText('Неудачная попытка входа')).toBeInTheDocument()
     await userEvent.selectOptions(screen.getByLabelText('Тип события'), 'security')
     expect(api.getAudit).toHaveBeenLastCalledWith('security')
+  })
+
+  it('сбрасывает пароль и показывает новый один раз', async () => {
+    api.resetUserPassword.mockResolvedValue({ password: 'Abc1234567', login: '+7 ••• ••• 01 02' })
+    renderAdmin()
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'Пользователи' }))
+    const row = (await screen.findByText('Ковалёва Нина Петровна')).closest('tr')
+    await userEvent.click(within(row).getByRole('button', { name: 'Сбросить пароль' }))
+
+    expect(api.resetUserPassword).toHaveBeenCalledWith(4)
+    expect(await screen.findByRole('status')).toHaveTextContent('Abc1234567')
+    expect(screen.getByText(/Показывается один раз/)).toBeInTheDocument()
+  })
+
+  it('удаляет аккаунт только после подтверждения', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    api.deleteUser.mockResolvedValue({ ok: true })
+    renderAdmin()
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'Пользователи' }))
+    const row = (await screen.findByText('Ковалёва Нина Петровна')).closest('tr')
+    await userEvent.click(within(row).getByRole('button', { name: 'Удалить' }))
+
+    expect(confirm).toHaveBeenCalled()
+    expect(api.deleteUser).toHaveBeenCalledWith(4)
+    expect(screen.queryByText('Ковалёва Нина Петровна')).not.toBeInTheDocument()
+    confirm.mockRestore()
   })
 })
