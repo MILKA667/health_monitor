@@ -27,9 +27,21 @@ venv\Scripts\python app.py
 
 Свою учётку: `flask --app app create-user --role admin --name "..." --email ...`.
 
-## SMS
+## Уведомления в Telegram
 
-Шлюза пока нет: сообщения (коды восстановления, уведомления) пишутся в таблицу `sms_outbox` и в лог сервера.
+Все уведомления (коды восстановления, временные пароли, алерты врачу и родственнику) идут через бота
+`@health_monitor_vyatgu_bot`. Пользователь привязывает чат в разделе «Telegram»: получает код в интерфейсе
+и открывает deep-link бота. Без привязки уведомления не доставляются — администратор видит новый пароль
+при сбросе и может передать его лично.
+
+В `backend/.env` (и в `.env` на сервере) нужны:
+
+```
+TELEGRAM_BOT_TOKEN=...
+TELEGRAM_BOT_USERNAME=health_monitor_vyatgu_bot
+```
+
+Сервис `bot` в `deploy/docker-compose.yml` запускает long polling на том же образе, что и backend.
 
 ## Тесты
 

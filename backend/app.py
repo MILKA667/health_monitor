@@ -17,6 +17,7 @@ import patient
 import relative
 import reports
 import seed
+import telegram
 import thresholds
 import welcome
 from db import apply_schema, get_db_connection
@@ -47,6 +48,7 @@ app.register_blueprint(reports.bp)
 app.register_blueprint(patient.bp)
 app.register_blueprint(relative.bp)
 app.register_blueprint(admin.bp)
+app.register_blueprint(telegram.bp)
 app.cli.add_command(seed.seed_demo)
 
 

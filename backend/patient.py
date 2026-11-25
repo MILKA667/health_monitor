@@ -10,8 +10,8 @@ from db import audit, db_cursor, today as app_today
 from doctor import chart_payload, stats_payload
 from monitoring import (NOSOLOGY_KIND, UNITS, evaluate, fmt_number, fmt_value, load_thresholds, record_measurement,
                         target_text)
+from notifications import notify
 from security import current_user, error, login_required, mask_phone, password_problem, short_name, start_session
-from sms import send_sms
 
 bp = Blueprint('patient', __name__, url_prefix='/api/patient')
 
@@ -380,7 +380,8 @@ def change_password():
             )
         updated = cur.fetchone()
         if row['phone']:
-            send_sms(cur, row['phone'], 'HealthMonitor: пароль изменён. Если это были не вы, позвоните в клинику.')
+            notify(cur, 'HealthMonitor: пароль изменён. Если это были не вы, позвоните в клинику.',
+                   user_id=row['id'])
         audit(cur, 'password_changed', row['id'], None, request.remote_addr, is_security=True)
 
     if sign_out_others:

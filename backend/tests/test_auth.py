@@ -1,4 +1,4 @@
-from helpers import last_sms_code, login
+from helpers import last_code, link_telegram, login
 
 from db import db_cursor
 
@@ -87,11 +87,12 @@ def test_patient_application_ignores_extra(client):
 def test_recover_full_flow_ends_other_sessions(client, make_client, demo):
     other = make_client()
     login(other, 'doctor@demo.ru')
+    link_telegram('79000000001')
 
     assert client.post('/api/auth/recover/code', json={'login': 'doctor@demo.ru'}).get_json() == {
         'masked': '+7 ••• ••• 00 01'}
     token = client.post('/api/auth/recover/verify',
-                        json={'login': 'doctor@demo.ru', 'code': last_sms_code()}).get_json()['token']
+                        json={'login': 'doctor@demo.ru', 'code': last_code()}).get_json()['token']
 
     weak = client.post('/api/auth/recover/reset', json={'token': token, 'password': 'short'})
     assert weak.status_code == 400
@@ -104,8 +105,9 @@ def test_recover_full_flow_ends_other_sessions(client, make_client, demo):
 
 
 def test_recover_code_attempts_and_resend_limit(client, demo):
+    link_telegram('79000000001')
     client.post('/api/auth/recover/code', json={'login': 'doctor@demo.ru'})
-    code = last_sms_code()
+    code = last_code()
     wrong = '000000' if code != '000000' else '111111'
 
     assert client.post('/api/auth/recover/code', json={'login': 'doctor@demo.ru'}).status_code == 429
@@ -119,3 +121,9 @@ def test_recover_code_attempts_and_resend_limit(client, demo):
 
 def test_recover_unknown_login(client, demo):
     assert client.post('/api/auth/recover/code', json={'login': 'nobody@demo.ru'}).status_code == 404
+
+
+def test_recover_requires_linked_telegram(client, demo):
+    response = client.post('/api/auth/recover/code', json={'login': 'doctor@demo.ru'})
+    assert response.status_code == 400
+    assert 'Telegram' in response.get_json()['error']

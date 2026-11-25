@@ -6,9 +6,9 @@ from flask import Blueprint, jsonify, request, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from db import audit, db_cursor
+from notifications import chat_id_for, notify
 from security import (current_user, error, login_required, mask_phone, normalize_email, normalize_phone,
                       parse_login, password_problem, short_name, start_session)
-from sms import send_sms
 
 bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -163,6 +163,8 @@ def recover_code():
             return error('Не нашли учётную запись с таким телефоном или e-mail.', 404)
         if not user['phone']:
             return error('К учётной записи не привязан телефон. Восстановить вход может администратор клиники.', 400)
+        if not chat_id_for(cur, user_id=user['id']):
+            return error('Код приходит только в Telegram. Привяжите Telegram после входа или обратитесь в клинику.', 400)
 
         cur.execute(
             """SELECT extract(epoch FROM now() - created_at) AS age FROM recovery_codes
@@ -180,7 +182,7 @@ def recover_code():
                VALUES (%s, %s, now() + %s::interval)""",
             (user['id'], generate_password_hash(code), CODE_LIFETIME),
         )
-        send_sms(cur, user['phone'], f'HealthMonitor: код для смены пароля {code}. Никому его не сообщайте.')
+        notify(cur, f'HealthMonitor: код для смены пароля {code}. Никому его не сообщайте.', user_id=user['id'])
         audit(cur, 'recover_code_sent', user['id'], None, ip, is_security=True)
 
     return jsonify({'masked': mask_phone(user['phone'])})
@@ -250,8 +252,7 @@ def recover_reset():
             return error(problem)
 
         set_password(cur, user['id'], password)
-        if user['phone']:
-            send_sms(cur, user['phone'], 'HealthMonitor: пароль изменён. Если это были не вы, позвоните в клинику.')
+        notify(cur, 'HealthMonitor: пароль изменён. Если это были не вы, позвоните в клинику.', user_id=user['id'])
         audit(cur, 'password_reset', user['id'], None, request.remote_addr, is_security=True)
 
     session.clear()

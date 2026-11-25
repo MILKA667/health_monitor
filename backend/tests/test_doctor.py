@@ -1,6 +1,7 @@
-from helpers import create_doctor, login
+from helpers import create_doctor, link_telegram, login
 
 from db import db_cursor
+from notifications import SENT
 
 
 def worklist(client):
@@ -86,10 +87,17 @@ def test_foreign_doctor_cannot_accept_alerts(client, make_client, demo):
     assert client.post(f'/api/doctor/alerts/{alert_id}/accept', json={}).status_code == 200
 
 
-def test_critical_alert_sends_sms_to_relative(demo):
-    with db_cursor() as cur:
-        cur.execute("SELECT text FROM sms_outbox WHERE phone = '79010000102' ORDER BY id DESC LIMIT 1")
-        assert cur.fetchone()['text'].startswith('HealthMonitor: Ковалёва Н. П. — критичное значение 2,9 ммоль/л')
+def test_critical_alert_notifies_doctor_and_relative(client, demo):
+    link_telegram('79000000001')   # врач
+    link_telegram('79010000102')   # телефон контакта совпадает с аккаунтом родственника
+    login(client, '+79000000102')
+
+    response = client.post('/api/patient/measurements', json={'kind': 'glucose', 'value': '3,1'})
+    assert response.status_code == 201 and response.get_json()['alert']
+
+    texts = [item['text'] for item in SENT]
+    assert any(text.startswith('HealthMonitor: Ковалёва Нина Петровна — 3,1 ммоль/л') for text in texts)
+    assert any('критичное значение 3,1 ммоль/л' in text for text in texts)
 
 
 def test_no_data_alert_created_once(client, demo):
@@ -197,7 +205,7 @@ def test_patient_alert_log(client, demo):
     assert len(alerts) == 3
     assert (alerts[0]['level'], alerts[0]['value'], alerts[0]['unit']) == ('crit', '2,9', 'ммоль/л')
     assert alerts[0]['acceptedAt'] is None
-    assert alerts[0]['relativeSmsAt'] is not None
+    assert alerts[0]['acceptedAt'] is None
     assert alerts[1]['acceptedBy'] == 'Смирнова Е. А.'
     assert alerts[2]['level'] == 'crit'
 
@@ -212,7 +220,7 @@ def test_alerts_page(client, demo):
     assert kovaleva['patientName'] == 'Ковалёва Нина Петровна'
     assert kovaleva['diagnosis'] == 'Сахарный диабет 2 типа'
     assert (kovaleva['value'], kovaleva['unit']) == ('2,9', 'ммоль/л')
-    assert kovaleva['relativeName'] == 'Ковалёв Дмитрий, сын' and kovaleva['relativeSmsAt']
+    assert kovaleva['relativeName'] == 'Ковалёв Дмитрий, сын'
     assert kovaleva['acceptedAt'] is None and kovaleva['canAccept'] is True and kovaleva['own'] is True
 
     assert saveliev['patientName'] == 'Савельев Игорь Андреевич'

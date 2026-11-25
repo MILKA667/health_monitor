@@ -66,7 +66,7 @@ function PatientAlert() {
         {alert.relative && alert.relativeSmsAt && (
           <div className="alert-row">
             <span>{alert.relative.label}</span>
-            <span className="alert-row__time">SMS <span className="num">{formatTime(alert.relativeSmsAt)}</span></span>
+            <span className="alert-row__time">Telegram <span className="num">{formatTime(alert.relativeSmsAt)}</span></span>
           </div>
         )}
       </section>

@@ -80,7 +80,7 @@ function PatientProfile() {
             </div>
             <label className="profile__item">
               <span className="profile__text">
-                <span>Экстренные SMS {relation(profile.relative.name)}</span>
+                <span>Экстренные уведомления {relation(profile.relative.name)}</span>
                 <span className="profile__sub">
                   {profile.relative.smsAlerts
                     ? 'при значении вне критического порога'
@@ -91,7 +91,7 @@ function PatientProfile() {
                 type="checkbox"
                 className="profile__check"
                 checked={profile.relative.smsAlerts}
-                aria-label={`Экстренные SMS ${relation(profile.relative.name)}`}
+                aria-label={`Экстренные уведомления ${relation(profile.relative.name)}`}
                 onChange={(e) => save({ relativeSms: e.target.checked })}
               />
             </label>
@@ -110,7 +110,7 @@ function PatientProfile() {
       </section>
 
       <section className="profile__section" aria-labelledby="profile-channels">
-        <h2 id="profile-channels">Напоминания приходят</h2>
+        <h2 id="profile-channels">Уведомления приходят</h2>
         <label className="profile__item">
           <span className="profile__text">Push-уведомлением</span>
           <input
@@ -122,18 +122,27 @@ function PatientProfile() {
           />
         </label>
         <label className="profile__item">
-          <span className="profile__text">SMS</span>
+          <span className="profile__text">Telegram</span>
           <input
             type="checkbox"
             className="profile__check"
             checked={profile.channels.sms}
-            aria-label="SMS"
+            aria-label="Telegram"
             onChange={(e) => save({ sms: e.target.checked })}
           />
         </label>
         {!profile.channels.push && !profile.channels.sms && (
           <p className="profile__channel-error" role="alert">Выберите хотя бы один способ, иначе напоминания не придут.</p>
         )}
+      </section>
+
+      <section className="profile__section" aria-labelledby="profile-telegram">
+        <h2 id="profile-telegram">Уведомления в Telegram</h2>
+        <div className="profile__row">
+          <span>Коды восстановления и алерты</span>
+          <Link to="/telegram">Настроить</Link>
+        </div>
+        <p className="patient-hint">Без привязки Telegram уведомления не приходят.</p>
       </section>
 
       <section className="profile__section" aria-labelledby="profile-consents">

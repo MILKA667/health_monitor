@@ -85,7 +85,7 @@ describe('Thresholds', () => {
     renderThresholds()
 
     await screen.findByLabelText('Глюкоза крови: критично ниже')
-    await userEvent.click(await screen.findByRole('checkbox', { name: /SMS родственнику/ }))
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Уведомление родственнику/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
 
     expect(api.saveThresholds).toHaveBeenCalledWith(expect.objectContaining({

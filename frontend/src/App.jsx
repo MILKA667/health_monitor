@@ -23,6 +23,7 @@ import PatientDevices from './pages/PatientDevices'
 import PatientPassword from './pages/PatientPassword'
 import RelativeHome from './pages/RelativeHome'
 import Admin from './pages/Admin'
+import Telegram from './pages/Telegram'
 
 // Этап 1: вход, заявка, восстановление пароля, первый вход.
 // Этап 2: врач. Страницы пациента, родственника и администратора добавляются следующими этапами.
@@ -56,6 +57,7 @@ function App() {
         </Route>
         <Route path="/relative" element={<RelativeHome />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/telegram" element={<Telegram />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>

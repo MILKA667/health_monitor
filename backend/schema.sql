@@ -48,6 +48,15 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ NOT N
 -- Удаление учётной записи: вход запрещён, персональные контакты очищаются, медданные остаются
 ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 
+-- Telegram: личная привязка для уведомлений
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT;
+CREATE TABLE IF NOT EXISTS telegram_link_codes (
+    user_id     INTEGER PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    code_hash   TEXT NOT NULL,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- У удалённой записи контактов может не быть
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_check;
 ALTER TABLE users ADD CONSTRAINT users_check CHECK (phone IS NOT NULL OR email IS NOT NULL OR deleted_at IS NOT NULL);

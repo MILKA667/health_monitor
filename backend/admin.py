@@ -7,8 +7,8 @@ from flask import Blueprint, jsonify, request
 from werkzeug.security import generate_password_hash
 
 from db import audit, db_cursor
+from notifications import notify
 from security import current_user, error, login_required, mask_phone, short_name
-from sms import send_sms
 
 bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -261,11 +261,10 @@ def approve(application_id):
         cur.execute("UPDATE applications SET status = 'approved', approved_user_id = %s, decided_at = now() "
                     "WHERE id = %s", (user_id, application_id))
         if password:
-            send_sms(cur, application['phone'],
-                     f'HealthMonitor: доступ открыт. Временный пароль: {password}. '
-                     'При первом входе замените его.')
+            notify(cur, f'HealthMonitor: доступ открыт. Временный пароль: {password}. '
+                         'Войдите и привяжите Telegram, чтобы получать уведомления.', user_id=user_id)
         audit(cur, 'application_approved', admin['id'], f'application:{application_id}', request.remote_addr)
-    return jsonify({'ok': True, 'userId': user_id})
+    return jsonify({'ok': True, 'userId': user_id, 'tempPassword': password})
 
 
 @bp.post('/applications/<int:application_id>/reject')
@@ -372,8 +371,8 @@ def reset_user_password(user_id):
             (generate_password_hash(password), user_id),
         )
         if user['phone']:
-            send_sms(cur, user['phone'],
-                     f'HealthMonitor: новый временный пароль: {password}. Смените его после входа.')
+            notify(cur, f'HealthMonitor: новый временный пароль: {password}. '
+                        'Войдите и смените его в профиле.', user_id=user_id)
         audit(cur, 'password_reset_by_admin', admin['id'], f'user:{user_id}', request.remote_addr,
               is_security=True)
     return jsonify({

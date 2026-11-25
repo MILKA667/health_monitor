@@ -209,7 +209,7 @@ function Thresholds() {
                 onChange={(e) => setSetting('smsRelative', e.target.checked)}
               />
               <span className="thresholds__check-text">
-                <span>SMS родственнику при критичном значении</span>
+                <span>Уведомление родственнику в Telegram</span>
                 <span className="hint">только при согласии пациента</span>
               </span>
             </label>

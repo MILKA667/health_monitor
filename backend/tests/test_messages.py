@@ -24,8 +24,7 @@ def test_dialogs_list(client, demo):
     assert kovaleva['lastMeasurement']['value'] == '2,9'
     assert kovaleva['lastMeasurement']['unit'] == 'ммоль/л'
     assert kovaleva['lastMeasurement']['level'] == 'crit'
-    assert kovaleva['alert']['value'] == '2,9' and kovaleva['alert']['relativeSmsAt']
-    assert kovaleva['alert']['relativeSmsAt'] is not None
+    assert kovaleva['alert']['value'] == '2,9'
 
     with db_cursor() as cur:
         cur.execute("SELECT count(*) AS n FROM audit_log WHERE action = 'messages_viewed'")

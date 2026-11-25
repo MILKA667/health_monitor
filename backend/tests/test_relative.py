@@ -17,7 +17,6 @@ def test_relative_home(client, demo):
         'phone': '79000000102',
     }
     assert data['alert']['value'] == '2,9' and data['alert']['kind'] == 'glucose'
-    assert data['alert']['relativeSmsAt'] is not None
     assert data['alert']['acceptedAt'] is None
     assert [row['value'] for row in data['measurements']] == ['2,9', '3,4', '3,8', '4,6']
     assert data['measurements'][0]['level'] == 'crit'

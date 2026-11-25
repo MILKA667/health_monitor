@@ -153,7 +153,7 @@ function Messages() {
                   <li className="messages__system">
                     Система · <span className="num">{formatTime(active.alert.createdAt)}</span> — критический алерт:{' '}
                     {active.alert.value} {active.alert.unit}.
-                    {active.alert.relativeSmsAt ? ' Родственник уведомлён SMS.' : ''}
+                    {active.alert.relativeSmsAt ? ' Родственник уведомлён в Telegram.' : ''}
                   </li>
                 )}
                 {messages.map((message) => (

@@ -80,7 +80,7 @@ describe('Alerts', () => {
 
     const row = screen.getByText('Ковалёва Нина Петровна').closest('.alerts__row')
     expect(within(row).getByText('2,9')).toBeInTheDocument()
-    expect(within(row).getByText('врач; сын — SMS ' + formatTime(OPEN_ALERT.relativeSmsAt))).toBeInTheDocument()
+    expect(within(row).getByText('врач; сын — Telegram ' + formatTime(OPEN_ALERT.relativeSmsAt))).toBeInTheDocument()
     expect(within(row).getByText('ожидает')).toBeInTheDocument()
     expect(within(row).getByRole('button', { name: 'Принять' })).toBeInTheDocument()
     expect(screen.queryByText('Лебедева Ольга Ивановна')).not.toBeInTheDocument()

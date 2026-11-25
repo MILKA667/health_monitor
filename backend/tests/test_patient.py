@@ -1,4 +1,4 @@
-from helpers import login
+from helpers import last_notification_text, link_telegram, login
 
 from db import db_cursor
 
@@ -92,7 +92,6 @@ def test_latest_alert_for_patient(client, demo):
     assert alert['threshold'] == 'ниже 3,9 или выше 13,9 ммоль/л'
     assert alert['doctor'] == {'name': 'Смирнова Е. А.'}
     assert alert['relative'] == {'label': 'Сын, Ковалёв Д.'}
-    assert alert['relativeSmsAt'] is not None
     assert alert['memo']['author'] == 'Смирнова Е. А.'
     assert alert['memo']['text'].startswith('Нина Петровна, примите 15–20 г')
 
@@ -275,6 +274,7 @@ def test_devices(client, demo):
 
 
 def test_password_change(client, make_client, demo):
+    link_telegram('79000000102')
     login(client, '+79000000102')
     assert client.post('/api/patient/password', json={
         'currentPassword': 'wrong', 'password': 'Newpass123'}).status_code == 400
@@ -302,6 +302,4 @@ def test_password_change(client, make_client, demo):
     assert second.get('/api/patient/profile').status_code == 401
     assert client.get('/api/patient/profile').status_code == 200
 
-    with db_cursor() as cur:
-        cur.execute("SELECT text FROM sms_outbox WHERE phone = '79000000102' ORDER BY id DESC LIMIT 1")
-        assert 'пароль изменён' in cur.fetchone()['text']
+    assert 'пароль изменён' in last_notification_text()

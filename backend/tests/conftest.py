@@ -15,6 +15,13 @@ os.environ.setdefault('SECRET_KEY', 'test-secret')
 from app import app as flask_app  # noqa: E402
 from db import apply_schema, db_cursor  # noqa: E402
 
+import notifications  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def clear_notifications():
+    notifications.SENT.clear()
+
 
 def create_database_if_missing():
     conn = psycopg2.connect(

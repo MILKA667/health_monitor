@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router'
+import { Link, NavLink } from 'react-router'
 import './style.css'
 
 const SECTIONS = [
@@ -29,6 +29,8 @@ function Header({ openAlerts = 0, userName, userRole, onLogout }) {
       </nav>
       <span className="header__user">
         {[userName, userRole].filter(Boolean).join(' · ')}
+        {' · '}
+        <Link to="/telegram" className="header__telegram">Telegram</Link>
         {' · '}
         <button type="button" className="header__logout" onClick={onLogout}>Выйти</button>
       </span>

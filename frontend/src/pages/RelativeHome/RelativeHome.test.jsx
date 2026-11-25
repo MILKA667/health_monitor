@@ -52,7 +52,7 @@ describe('RelativeHome', () => {
     expect(screen.getByRole('heading', { name: 'Сахар ниже допустимого' })).toBeInTheDocument()
     expect(screen.getAllByText('2,9').length).toBeGreaterThan(0)
     expect(screen.getByText('Врач получил уведомление')).toBeInTheDocument()
-    expect(screen.getByText('Вам отправлено SMS')).toBeInTheDocument()
+    expect(screen.getByText('Вам отправлено сообщение в Telegram')).toBeInTheDocument()
     expect(screen.getByText('Ожидается реакция врача')).toBeInTheDocument()
     expect(screen.getByText('−1,0 ниже 3,9')).toBeInTheDocument()
     expect(screen.getByText('в пределах цели')).toBeInTheDocument()
