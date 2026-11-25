@@ -72,3 +72,10 @@ export function getThresholds(scope) {
 export function saveThresholds(payload) {
   return request('/doctor/thresholds', { method: 'POST', body: payload })
 }
+
+// Диалоги врача: только пациенты, с которыми есть переписка.
+// → { conversations: [{ patientId, name, shortName, diagnosis, unread, lastMessage: { body, mine, createdAt },
+//     lastMeasurement: { value, unit, level, measuredAt } | null, alert }] }
+export function getConversations() {
+  return request('/doctor/messages')
+}

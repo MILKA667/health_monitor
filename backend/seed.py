@@ -197,13 +197,15 @@ def seed_messages(cur, patient_id, doctor_id, now):
         return
     cur.execute('SELECT phone FROM users WHERE id = %s', (patient_id,))
     phone = cur.fetchone()['phone']
-    for patient_phone, author, minutes_ago, text in MESSAGES:
-        if patient_phone != phone:
-            continue
+    sent = [(patient_phone, author, minutes_ago, text) for patient_phone, author, minutes_ago, text in MESSAGES
+            if patient_phone == phone]
+    for index, (_, author, minutes_ago, text) in enumerate(sent):
+        # Последнее сообщение пациента врач ещё не читал — в списке диалогов будет «1 нов.»
+        unread = author == 'patient' and index == len(sent) - 1
         cur.execute(
             'INSERT INTO messages (patient_id, sender_id, body, created_at, read_at) VALUES (%s, %s, %s, %s, %s)',
             (patient_id, patient_id if author == 'patient' else doctor_id, text,
-             now - timedelta(minutes=minutes_ago), now),
+             now - timedelta(minutes=minutes_ago), None if unread else now),
         )
 
 

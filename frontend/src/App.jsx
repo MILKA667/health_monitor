@@ -8,6 +8,7 @@ import Worklist from './pages/Worklist'
 import Record from './pages/Record'
 import Alerts from './pages/Alerts'
 import Thresholds from './pages/Thresholds'
+import Messages from './pages/Messages'
 
 // Этап 1: вход, заявка, восстановление пароля, первый вход.
 // Этап 2: врач. Страницы пациента, родственника и администратора добавляются следующими этапами.
@@ -24,6 +25,7 @@ function App() {
           <Route path="patients/:patientId" element={<Record />} />
           <Route path="alerts" element={<Alerts />} />
           <Route path="thresholds" element={<Thresholds />} />
+          <Route path="messages" element={<Messages />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
