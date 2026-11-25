@@ -1,0 +1,89 @@
+.history {
+  gap: var(--s-4);
+}
+
+.history__filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+
+.history__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history__label {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.history__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-4);
+  color: var(--text-2);
+  font-size: var(--tm-secondary);
+}
+
+.history__stats .num {
+  color: var(--text);
+}
+
+.history__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-3);
+  color: var(--text-2);
+  font-size: var(--tm-caption);
+}
+
+.history__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history__legend-line {
+  width: 18px;
+  border-top: 2px solid var(--text);
+}
+
+.history__legend-line--1 {
+  border-top-color: var(--text-3);
+}
+
+.history__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tm-secondary);
+  line-height: 20px;
+}
+
+.history__table td {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-row);
+}
+
+.history__when {
+  color: var(--text-2);
+}
+
+.history__value {
+  font-weight: 500;
+  text-align: right;
+}
+
+.history__value--crit {
+  color: var(--crit);
+}
+
+.history__value--warn {
+  color: var(--warn-text);
+}
+
+.history__context {
+  padding-left: var(--s-3);
+  color: var(--text-2);
+}

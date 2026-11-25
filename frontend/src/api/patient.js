@@ -21,3 +21,9 @@ export function addMeasurement(data) {
 export function getLatestAlert() {
   return request('/patient/alerts/latest')
 }
+
+// История измерений за 7 или 14 дней
+// → { days, kind, kindTitle, target, chart, stats, measurements }
+export function getHistory(days) {
+  return request(`/patient/measurements?days=${days}`)
+}

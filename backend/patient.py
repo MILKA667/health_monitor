@@ -4,6 +4,7 @@ from datetime import date, datetime, timezone
 from flask import Blueprint, jsonify, request
 
 from db import audit, db_cursor
+from doctor import chart_payload, stats_payload
 from monitoring import (NOSOLOGY_KIND, UNITS, evaluate, fmt_number, fmt_value, load_thresholds, record_measurement,
                         target_text)
 from security import current_user, error, login_required, short_name
@@ -244,6 +245,37 @@ def threshold_text(kind, thresholds, patient):
     if patient['pef_best'] and percent is not None:
         text += f' ({fmt_number(patient["pef_best"] * percent / 100, "pef")} л/мин)'
     return text
+
+
+@bp.get('/measurements')
+@login_required('patient')
+def history():
+    """История измерений за 7 или 14 дней: график, средние и таблица."""
+    days = request.args.get('days', type=int) or 14
+    if days not in (7, 14):
+        return error('Период: 7 или 14 дней.')
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+        thresholds = load_thresholds(cur, patient)
+        kind = NOSOLOGY_KIND[patient['nosology']]
+        cur.execute(
+            """SELECT * FROM measurements WHERE patient_id = %s
+               AND measured_at > now() - make_interval(days => %s) ORDER BY measured_at""",
+            (patient['user_id'], days),
+        )
+        rows = cur.fetchall()
+
+    return jsonify({
+        'days': days,
+        'kind': kind,
+        'kindTitle': KIND_TITLES[kind],
+        'target': target_text(patient, thresholds),
+        'chart': chart_payload(patient, rows, thresholds),
+        'stats': stats_payload(kind, rows, thresholds, patient['pef_best']),
+        'measurements': [measurement_card(row, thresholds, patient) for row in reversed(rows)],
+    })
 
 
 @bp.get('/alerts/latest')

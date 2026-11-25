@@ -101,3 +101,23 @@ def test_latest_alert_for_patient(client, demo):
 def test_patient_cannot_touch_foreign_slot(client, demo):
     login(client, '+79000000103')
     assert client.post('/api/patient/plan/medications/1', json={'done': True}).status_code == 404
+
+
+def test_history(client, demo):
+    login(client, '+79000000102')
+    data = client.get('/api/patient/measurements?days=14').get_json()
+
+    assert data['days'] == 14 and data['kind'] == 'glucose'
+    assert data['stats'][0] == {'label': 'Среднее', 'value': '3,7'}
+    assert [measurement['value'] for measurement in data['measurements']] == ['2,9', '3,4', '3,8', '4,6']
+    assert data['measurements'][0]['context'] == 'Натощак'
+    assert data['chart']['series'][0]['id'] == 'glucose'
+    assert data['chart']['bands'] == [{'from': 4.4, 'to': 10.0}]
+    assert client.get('/api/patient/measurements?days=7').get_json()['days'] == 7
+    assert client.get('/api/patient/measurements?days=30').status_code == 400
+
+
+def test_history_requires_patient(client, demo):
+    assert client.get('/api/patient/measurements').status_code == 401
+    login(client, 'doctor@demo.ru')
+    assert client.get('/api/patient/measurements').status_code == 403
