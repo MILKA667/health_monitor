@@ -182,9 +182,7 @@ def patient_dynamics(cur, patient, days):
 
 def patient_alerts(cur, patient_id, days):
     cur.execute(
-        """SELECT a.*, u.name AS accepted_by_name,
-                  COALESCE(a.accepted_at IS NULL AND a.escalate_at <= now(), FALSE) AS escalated,
-                  m.value, m.value2, m.kind
+        """SELECT a.*, u.name AS accepted_by_name, m.value, m.value2, m.kind
            FROM alerts a
            LEFT JOIN users u ON u.id = a.accepted_by
            LEFT JOIN measurements m ON m.id = a.measurement_id
@@ -200,7 +198,6 @@ def patient_alerts(cur, patient_id, days):
         'rule': row['rule'],
         'acceptedBy': short_name(row['accepted_by_name']) if row['accepted_by_name'] else None,
         'responseMinutes': response_minutes(row),
-        'escalated': row['escalated'],
     } for row in cur.fetchall()]
 
 
@@ -301,7 +298,6 @@ def group_report(cur, doctor_id, nosology, days):
 def response_report(cur, doctor_id, days):
     cur.execute(
         """SELECT a.*, u.name AS patient_name, acc.name AS accepted_by_name,
-                  COALESCE(a.accepted_at IS NULL AND a.escalate_at <= now(), FALSE) AS escalated,
                   m.value, m.value2, m.kind
            FROM alerts a
            JOIN patients p ON p.user_id = a.patient_id
@@ -324,12 +320,10 @@ def response_report(cur, doctor_id, days):
             'rule': row['rule'],
             'acceptedBy': short_name(row['accepted_by_name']) if row['accepted_by_name'] else None,
             'responseMinutes': response_minutes(row),
-            'escalated': row['escalated'],
         } for row in rows],
         'summary': {
             'total': len(rows),
             'crit': sum(1 for row in rows if row['level'] == 'crit'),
-            'escalated': sum(1 for row in rows if row['escalated']),
             'accepted': len(responses),
             'avgResponseMinutes': round(sum(responses) / len(responses)) if responses else None,
         },

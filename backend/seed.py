@@ -12,9 +12,8 @@ DEMO_PASSWORD = 'demo1234'
 TEMP_PASSWORD = 'temp1234'
 
 DOCTORS = [
-    # ФИО, телефон, e-mail, специальность, дежурный
-    ('Смирнова Елена Андреевна', '79000000001', 'doctor@demo.ru', 'эндокринолог', False),
-    ('Орлов Виктор Николаевич', '79000000002', 'duty@demo.ru', 'терапевт', True),
+    # ФИО, телефон, e-mail, специальность
+    ('Смирнова Елена Андреевна', '79000000001', 'doctor@demo.ru', 'эндокринолог'),
 ]
 CLINIC = 'Городская поликлиника № 3'
 
@@ -237,12 +236,12 @@ def seed_demo():
         upsert_user(cur, 'admin', 'Администратор клиники', '79000000000', 'admin@demo.ru', DEMO_PASSWORD)
 
         doctor_ids = []
-        for name, phone, email, specialty, on_duty in DOCTORS:
+        for name, phone, email, specialty in DOCTORS:
             doctor_id = upsert_user(cur, 'doctor', name, phone, email, DEMO_PASSWORD)
             cur.execute(
-                """INSERT INTO doctors (user_id, specialty, clinic, on_duty) VALUES (%s, %s, %s, %s)
+                """INSERT INTO doctors (user_id, specialty, clinic) VALUES (%s, %s, %s)
                    ON CONFLICT (user_id) DO NOTHING""",
-                (doctor_id, specialty, CLINIC, on_duty),
+                (doctor_id, specialty, CLINIC),
             )
             doctor_ids.append(doctor_id)
 

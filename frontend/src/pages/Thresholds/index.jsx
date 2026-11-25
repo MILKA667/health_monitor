@@ -13,8 +13,6 @@ const COLUMNS = [
   { key: 'critHigh', field: 'crit_high', label: 'Критично выше' },
 ]
 
-const ESCALATION = [10, 15, 20]
-
 function parseValue(text) {
   const trimmed = String(text ?? '').trim().replace(',', '.')
   if (!trimmed) return null
@@ -95,7 +93,6 @@ function Thresholds() {
         scope: data.scope,
         rows: data.rows.map((row) => ({ metric: row.metric, ...drafts[row.metric] })),
         settings: {
-          escalationMinutes: Number(settings.escalationMinutes),
           smsRelative: settings.smsRelative,
           noDataAlert: settings.noDataAlert,
         },
@@ -202,21 +199,8 @@ function Thresholds() {
             </p>
           </section>
 
-          <aside className="panel thresholds__aside" aria-labelledby="thresholds-escalation-title">
-            <h2 id="thresholds-escalation-title" className="thresholds__aside-title">Эскалация и уведомления</h2>
-
-            <label className="thresholds__setting">
-              <span className="thresholds__label">Передать дежурному врачу без реакции через</span>
-              <select
-                className="field__control field__control--sm"
-                value={settings.escalationMinutes}
-                onChange={(e) => setSetting('escalationMinutes', Number(e.target.value))}
-              >
-                {ESCALATION.map((minutes) => (
-                  <option key={minutes} value={minutes}>{minutes} минут</option>
-                ))}
-              </select>
-            </label>
+          <aside className="panel thresholds__aside" aria-labelledby="thresholds-notifications-title">
+            <h2 id="thresholds-notifications-title" className="thresholds__aside-title">Уведомления</h2>
 
             <label className="thresholds__check">
               <input

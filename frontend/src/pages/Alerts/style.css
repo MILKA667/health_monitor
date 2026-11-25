@@ -133,21 +133,16 @@ a.alerts__name:hover {
   font-size: 13px;
 }
 
-.alerts__escalation--pending {
+.alerts__reaction--pending {
   color: var(--crit);
   font-weight: 600;
 }
 
-.alerts__escalation--over {
-  color: var(--crit-text-on-bg);
-  font-weight: 600;
-}
-
-.alerts__escalation--none {
+.alerts__reaction--none {
   color: var(--text-3);
 }
 
-.alerts__escalation--done {
+.alerts__reaction--done {
   color: var(--text-2);
 }
 

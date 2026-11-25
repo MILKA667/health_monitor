@@ -26,7 +26,6 @@ NOSOLOGIES = [
 ]
 NOSOLOGY_LABELS = dict(NOSOLOGIES)
 DEFAULT_NOSOLOGY = 'diabetes'
-ESCALATION_MINUTES = (10, 15, 20)
 
 # Поля формы для четырёх порогов
 FORM_FIELDS = {'critLow': 'crit_low', 'warnLow': 'warn_low', 'warnHigh': 'warn_high', 'critHigh': 'crit_high'}
@@ -92,7 +91,6 @@ def form_payload(scope, thresholds, settings):
         'rows': [{'metric': metric, 'label': label, 'unit': unit, 'values': values_of(thresholds[metric], metric)}
                  for metric, label, unit, _ in METRICS],
         'settings': {
-            'escalationMinutes': settings['escalation_minutes'],
             'smsRelative': settings['sms_relative'],
             'noDataAlert': settings['no_data_alert'],
         },
@@ -139,14 +137,7 @@ def parse_rows(raw_rows):
 
 def parse_settings(raw_settings):
     raw_settings = raw_settings if isinstance(raw_settings, dict) else {}
-    try:
-        escalation = int(raw_settings.get('escalationMinutes', 15))
-    except (TypeError, ValueError):
-        raise ValueError('Время эскалации должно быть числом.')
-    if escalation not in ESCALATION_MINUTES:
-        raise ValueError('Время эскалации: 10, 15 или 20 минут.')
     return {
-        'escalation_minutes': escalation,
         'sms_relative': raw_settings.get('smsRelative') is True,
         'no_data_alert': raw_settings.get('noDataAlert') is True,
     }
@@ -172,12 +163,11 @@ def save_thresholds(cur, scope, rows):
 def save_settings(cur, scope, settings):
     column = 'patient_id' if scope['type'] == 'patient' else 'nosology'
     cur.execute(
-        f"""INSERT INTO alert_settings ({column}, escalation_minutes, sms_relative, no_data_alert)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT ({column}) DO UPDATE SET escalation_minutes = EXCLUDED.escalation_minutes,
-                                                 sms_relative = EXCLUDED.sms_relative,
+        f"""INSERT INTO alert_settings ({column}, sms_relative, no_data_alert)
+            VALUES (%s, %s, %s)
+            ON CONFLICT ({column}) DO UPDATE SET sms_relative = EXCLUDED.sms_relative,
                                                  no_data_alert = EXCLUDED.no_data_alert""",
-        (scope['id'], settings['escalation_minutes'], settings['sms_relative'], settings['no_data_alert']),
+        (scope['id'], settings['sms_relative'], settings['no_data_alert']),
     )
 
 

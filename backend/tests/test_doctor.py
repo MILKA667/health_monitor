@@ -1,4 +1,4 @@
-from helpers import login
+from helpers import create_doctor, login
 
 from db import db_cursor
 
@@ -34,8 +34,8 @@ def test_worklist_groups(client, demo):
     kovaleva = patients['Ковалёва Нина Петровна']
     assert kovaleva['last']['value'] == '2,9'
     assert kovaleva['last']['deviation'] == '−1,0 ниже 3,9'
-    assert kovaleva['alert']['escalated'] is False
-    assert patients['Савельев Игорь Андреевич']['alert']['escalated'] is True
+    assert kovaleva['alert']['level'] == 'crit' and kovaleva['alert']['acceptedAt'] is None
+    assert patients['Савельев Игорь Андреевич']['alert']['acceptedAt'] is None
 
 
 def test_header_counts_open_critical_alerts(client, demo):
@@ -54,7 +54,7 @@ def test_summary(client, demo):
 
 
 def test_summary_of_foreign_patient(client, demo):
-    login(client, 'duty@demo.ru')
+    create_doctor(client)
     with db_cursor() as cur:
         cur.execute('SELECT user_id FROM patients LIMIT 1')
         patient_id = cur.fetchone()['user_id']
@@ -76,18 +76,14 @@ def test_accept_and_undo_alert(client, demo):
         assert [row['action'] for row in cur.fetchall()] == ['alert_accepted', 'alert_accept_undone']
 
 
-def test_duty_doctor_accepts_only_escalated(client, make_client, demo):
-    owner = make_client()
-    login(owner, 'doctor@demo.ru')
-    patients = worklist(owner)
-    escalated = patients['Савельев Игорь Андреевич']['alert']['id']
-    pending = patients['Ковалёва Нина Петровна']['alert']['id']
+def test_foreign_doctor_cannot_accept_alerts(client, make_client, demo):
+    login(client, 'doctor@demo.ru')
+    alert_id = worklist(client)['Ковалёва Нина Петровна']['alert']['id']
 
-    login(client, 'duty@demo.ru')
-    assert client.post(f'/api/doctor/alerts/{pending}/accept', json={}).status_code == 404
-    assert client.post(f'/api/doctor/alerts/{escalated}/accept', json={}).status_code == 200
-    # Отменить может только тот, кто принял
-    assert owner.post(f'/api/doctor/alerts/{escalated}/undo').status_code == 403
+    other = make_client()
+    create_doctor(other)
+    assert other.post(f'/api/doctor/alerts/{alert_id}/accept', json={}).status_code == 404
+    assert client.post(f'/api/doctor/alerts/{alert_id}/accept', json={}).status_code == 200
 
 
 def test_critical_alert_sends_sms_to_relative(demo):
@@ -122,7 +118,7 @@ def test_record(client, demo):
     ]
     assert record['thresholds'][0]['value'] == 'ниже 3,9 или выше 13,9 ммоль/л'
     assert record['thresholds'][1]['value'] == '4,4–10,0 ммоль/л'
-    assert record['escalationMinutes'] == 15
+    assert record['lastMeasurementAt'] is not None
 
     chart = record['chart']
     assert chart['title'] == 'Глюкоза крови, ммоль/л'
@@ -149,7 +145,7 @@ def test_record_chart_of_two_lines_and_bad_period(client, demo):
 
 
 def test_record_of_foreign_patient_is_hidden(client, demo):
-    login(client, 'duty@demo.ru')
+    create_doctor(client)
     with db_cursor() as cur:
         cur.execute('SELECT user_id FROM patients LIMIT 1')
         patient_id = cur.fetchone()['user_id']
@@ -211,7 +207,6 @@ def test_alerts_page(client, demo):
     payload = client.get('/api/doctor/alerts').get_json()
 
     assert payload['counts'] == {'open': 7, 'closed': 10, 'all': 17}
-    assert payload['dutyDoctor'] == 'Орлов В. Н.'
 
     kovaleva, saveliev = payload['alerts'][0], payload['alerts'][1]
     assert kovaleva['patientName'] == 'Ковалёва Нина Петровна'
@@ -219,14 +214,12 @@ def test_alerts_page(client, demo):
     assert (kovaleva['value'], kovaleva['unit']) == ('2,9', 'ммоль/л')
     assert kovaleva['relativeName'] == 'Ковалёв Дмитрий, сын' and kovaleva['relativeSmsAt']
     assert kovaleva['acceptedAt'] is None and kovaleva['canAccept'] is True and kovaleva['own'] is True
-    assert kovaleva['escalated'] is False
 
     assert saveliev['patientName'] == 'Савельев Игорь Андреевич'
-    assert saveliev['escalated'] is True and saveliev['canAccept'] is True
+    assert saveliev['acceptedAt'] is None and saveliev['canAccept'] is True
 
     nodata = [a for a in payload['alerts'] if a['level'] == 'nodata']
     assert len(nodata) == 2 and all(a['value'] is None for a in nodata)
-    assert all(a['escalateAt'] is None for a in payload['alerts'] if a['level'] == 'warn')
 
 
 def test_alerts_accept_updates_counts(client, demo):
@@ -238,17 +231,10 @@ def test_alerts_accept_updates_counts(client, demo):
     assert counts == {'open': 6, 'closed': 11, 'all': 17}
 
 
-def test_duty_doctor_sees_only_escalated_alerts(client, demo):
-    login(client, 'duty@demo.ru')
-    payload = client.get('/api/doctor/alerts').get_json()
+def test_doctor_without_patients_sees_no_alerts(client, make_client, demo):
+    other = make_client()
+    create_doctor(other)
+    payload = other.get('/api/doctor/alerts').get_json()
 
-    assert [a['patientName'] for a in payload['alerts']] == ['Савельев Игорь Андреевич']
-    alert = payload['alerts'][0]
-    assert len(payload['alerts']) == 1
-    assert alert['own'] is False and alert['escalated'] is True and alert['canAccept'] is True
-    assert payload['counts'] == {'open': 1, 'closed': 0, 'all': 1}
-
-    assert client.post(f"/api/doctor/alerts/{alert['id']}/accept", json={}).status_code == 200
-    after = client.get('/api/doctor/alerts').get_json()
-    assert after['counts'] == {'open': 0, 'closed': 1, 'all': 1}
-    assert after['alerts'][0]['canUndo'] is True and after['alerts'][0]['acceptedBy'] == 'Орлов В. Н.'
+    assert payload['alerts'] == []
+    assert payload['counts'] == {'open': 0, 'closed': 0, 'all': 0}

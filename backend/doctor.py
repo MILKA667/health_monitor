@@ -7,7 +7,7 @@ from flask import Blueprint, jsonify, request
 import chat
 from db import audit, db_cursor, today as app_today
 from monitoring import (LEVEL_ORDER, NO_DATA_DAYS, NOSOLOGY_KIND, THRESHOLD_FIELDS, UNITS, ensure_no_data_alerts,
-                        evaluate, fmt_number, fmt_value, load_settings, load_thresholds, target_text)
+                        evaluate, fmt_number, fmt_value, load_thresholds, target_text)
 from security import current_user, error, login_required, mask_phone, short_name
 
 bp = Blueprint('doctor', __name__, url_prefix='/api/doctor')
@@ -40,8 +40,6 @@ def alert_json(alert):
         'level': alert['level'],
         'rule': alert['rule'],
         'createdAt': iso(alert['created_at']),
-        'escalateAt': iso(alert['escalate_at']),
-        'escalated': alert['escalated'],
         'acceptedAt': iso(alert['accepted_at']),
         'acceptedBy': short_name(alert['accepted_by_name']) if alert['accepted_by_name'] else None,
         'acceptedByMe': alert['accepted_by'] == current_user()['id'],
@@ -51,8 +49,7 @@ def alert_json(alert):
 
 
 ALERT_SELECT = """
-    SELECT a.*, u.name AS accepted_by_name,
-           COALESCE(a.accepted_at IS NULL AND a.escalate_at <= now(), FALSE) AS escalated
+    SELECT a.*, u.name AS accepted_by_name
     FROM alerts a LEFT JOIN users u ON u.id = a.accepted_by
 """
 
@@ -384,7 +381,6 @@ def record(patient_id):
         if not patient:
             return error('Пациент не найден.', 404)
         thresholds = load_thresholds(cur, patient)
-        settings = load_settings(cur, patient)
 
         cur.execute(
             """SELECT * FROM measurements WHERE patient_id = %s AND measured_at > now() - make_interval(days => %s)
@@ -439,7 +435,6 @@ def record(patient_id):
         'stats': stats_payload(NOSOLOGY_KIND[patient['nosology']], measurements, thresholds, patient['pef_best']),
         'measurements': [record_measurement_json(m, thresholds, patient['pef_best']) for m in reversed(measurements)],
         'thresholds': thresholds_payload(patient, thresholds),
-        'escalationMinutes': settings['escalation_minutes'],
         'lastMeasurementAt': iso(latest['measured_at']) if latest else None,
     })
 
@@ -522,8 +517,7 @@ def patient_alerts(patient_id):
         if not own_patient(cur, patient_id):
             return error('Пациент не найден.', 404)
         cur.execute(
-            """SELECT a.*, m.value, m.value2, m.kind, u.name AS accepted_by_name,
-                      COALESCE(a.accepted_at IS NULL AND a.escalate_at <= now(), FALSE) AS escalated
+            """SELECT a.*, m.value, m.value2, m.kind, u.name AS accepted_by_name
                FROM alerts a
                LEFT JOIN measurements m ON m.id = a.measurement_id
                LEFT JOIN users u ON u.id = a.accepted_by
@@ -544,26 +538,19 @@ def patient_alerts(patient_id):
         'acceptedAt': iso(row['accepted_at']),
         'acceptedBy': short_name(row['accepted_by_name']) if row['accepted_by_name'] else None,
         'acceptedByMe': row['accepted_by'] == current_user()['id'],
-        'escalateAt': iso(row['escalate_at']),
-        'escalated': row['escalated'],
     } for row in rows]})
 
 
 @bp.get('/alerts')
 @login_required('doctor')
 def alerts():
-    """Все алерты пациентов врача; дежурный дополнительно видит эскалированные чужие."""
+    """Все алерты пациентов лечащего врача."""
     user = current_user()
     with db_cursor() as cur:
         ensure_no_data_alerts(cur, user['id'])
-        cur.execute('SELECT on_duty FROM doctors WHERE user_id = %s', (user['id'],))
-        duty = cur.fetchone()
-        on_duty = bool(duty and duty['on_duty'])
         cur.execute(
             """SELECT a.*, p.diagnosis, u.name AS patient_name, u2.name AS accepted_by_name,
-                      m.value, m.value2, m.kind, c.name AS relative_name,
-                      (p.doctor_id = %s) AS own,
-                      COALESCE(a.accepted_at IS NULL AND a.escalate_at <= now(), FALSE) AS escalated
+                      m.value, m.value2, m.kind, c.name AS relative_name
                FROM alerts a
                JOIN patients p ON p.user_id = a.patient_id
                JOIN users u ON u.id = a.patient_id
@@ -571,18 +558,11 @@ def alerts():
                LEFT JOIN measurements m ON m.id = a.measurement_id
                LEFT JOIN patient_contacts c ON c.patient_id = a.patient_id
                WHERE p.doctor_id = %s
-                  OR (%s AND a.level = 'crit'
-                      AND ((a.accepted_at IS NULL AND a.escalate_at <= now()) OR a.accepted_by = %s))
                ORDER BY a.created_at DESC
                LIMIT 200""",
-            (user['id'], user['id'], on_duty, user['id']),
+            (user['id'],),
         )
         rows = cur.fetchall()
-        cur.execute(
-            """SELECT u.name FROM doctors d JOIN users u ON u.id = d.user_id
-               WHERE d.on_duty ORDER BY u.id LIMIT 1"""
-        )
-        duty_doctor = cur.fetchone()
         audit(cur, 'alerts_viewed', user['id'], None, request.remote_addr)
 
     items = [{
@@ -599,23 +579,20 @@ def alerts():
         'relativeSmsAt': iso(row['relative_sms_at']),
         'acceptedAt': iso(row['accepted_at']),
         'acceptedBy': short_name(row['accepted_by_name']) if row['accepted_by_name'] else None,
-        'escalateAt': iso(row['escalate_at']),
-        'escalated': row['escalated'],
-        'own': row['own'],
-        'canAccept': row['accepted_at'] is None and (row['own'] or (on_duty and row['escalated'])),
+        'own': True,
+        'canAccept': row['accepted_at'] is None,
         'canUndo': row['accepted_by'] == user['id'],
     } for row in rows]
 
     open_count = sum(1 for item in items if item['acceptedAt'] is None)
     return jsonify({
         'counts': {'open': open_count, 'closed': len(items) - open_count, 'all': len(items)},
-        'dutyDoctor': short_name(duty_doctor['name']) if duty_doctor else None,
         'alerts': items,
     })
 
 
 def load_alert_for_action(cur, alert_id):
-    """Принять алерт может лечащий врач пациента, а эскалированный — ещё и дежурный."""
+    """Принять или отменить алерт может только лечащий врач пациента."""
     cur.execute(
         ALERT_SELECT + """JOIN patients p ON p.user_id = a.patient_id
                           WHERE a.id = %s FOR UPDATE OF a""",
@@ -624,13 +601,8 @@ def load_alert_for_action(cur, alert_id):
     alert = cur.fetchone()
     if not alert:
         return None
-    user_id = current_user()['id']
     cur.execute('SELECT doctor_id FROM patients WHERE user_id = %s', (alert['patient_id'],))
-    if cur.fetchone()['doctor_id'] == user_id:
-        return alert
-    cur.execute('SELECT on_duty FROM doctors WHERE user_id = %s', (user_id,))
-    duty = cur.fetchone()
-    return alert if alert['escalated'] and duty and duty['on_duty'] else None
+    return alert if cur.fetchone()['doctor_id'] == current_user()['id'] else None
 
 
 @bp.post('/alerts/<int:alert_id>/accept')

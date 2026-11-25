@@ -57,15 +57,12 @@ function alertTitle(record) {
 
 function alertText(record) {
   const { alert } = record
-  if (alert.acceptedAt) return alert.comment ? `Комментарий: ${alert.comment}` : 'Эскалация отменена.'
+  if (alert.acceptedAt) return alert.comment ? `Комментарий: ${alert.comment}` : 'Алерт принят врачом.'
   const latest = record.measurements[0]
   const rule = alert.rule ? alert.rule.charAt(0).toLowerCase() + alert.rule.slice(1) : 'значение за критическим порогом'
   const notified = alert.relativeSmsAt ? 'Врач и родственник уведомлены.' : 'Врач уведомлён.'
-  const escalate = alert.escalated
-    ? `Алерт передан дежурному врачу в ${formatTime(alert.escalateAt)}.`
-    : `Без реакции в ${formatTime(alert.escalateAt)} алерт уйдёт дежурному врачу.`
   const value = latest ? `Значение ${latest.value} ${latest.unit}: ` : 'Значение: '
-  return `${value}${rule}. ${notified} ${escalate}`
+  return `${value}${rule}. ${notified}`
 }
 
 function messageText(alert) {
@@ -293,8 +290,8 @@ function RecordView({ patientId }) {
                   </div>
                 ))}
                 <div>
-                  <dt>Эскалация</dt>
-                  <dd>через {record.escalationMinutes} мин без реакции → дежурный врач</dd>
+                  <dt>Статус</dt>
+                  <dd>{record.alert ? 'активный критический алерт' : 'без активных алертов'}</dd>
                 </div>
               </dl>
             </section>

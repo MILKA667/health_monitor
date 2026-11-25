@@ -67,7 +67,7 @@ describe('Report', () => {
     expect(screen.getByText('Городская поликлиника № 3')).toBeInTheDocument()
     expect(screen.getByText('жен., 67 лет')).toBeInTheDocument()
     expect(screen.getByText('натощак')).toBeInTheDocument()
-    expect(screen.getByText('эскалирован дежурному врачу')).toBeInTheDocument()
+    expect(screen.getByText('ожидает')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '← К отчётам' })).toHaveAttribute('href', '/doctor/reports')
     expect(screen.getByRole('button', { name: 'Печать / Сохранить в PDF' })).toBeInTheDocument()
   })

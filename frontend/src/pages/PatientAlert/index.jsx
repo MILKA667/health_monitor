@@ -69,13 +69,6 @@ function PatientAlert() {
             <span className="alert-row__time">SMS <span className="num">{formatTime(alert.relativeSmsAt)}</span></span>
           </div>
         )}
-        {alert.escalateAt && (
-          <p className="alert-page__muted">
-            {alert.escalated
-              ? <>Сигнал передан дежурному врачу в <span className="num">{formatTime(alert.escalateAt)}</span>.</>
-              : <>Если врач не ответит до <span className="num">{formatTime(alert.escalateAt)}</span>, сигнал получит дежурный врач.</>}
-          </p>
-        )}
       </section>
 
       {alert.memo && (

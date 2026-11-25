@@ -95,7 +95,6 @@ def test_latest_alert_for_patient(client, demo):
     assert alert['relativeSmsAt'] is not None
     assert alert['memo']['author'] == 'Смирнова Е. А.'
     assert alert['memo']['text'].startswith('Нина Петровна, примите 15–20 г')
-    assert alert['escalated'] is False
 
 
 def test_patient_cannot_touch_foreign_slot(client, demo):

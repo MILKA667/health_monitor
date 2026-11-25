@@ -154,7 +154,6 @@ function Messages() {
                     Система · <span className="num">{formatTime(active.alert.createdAt)}</span> — критический алерт:{' '}
                     {active.alert.value} {active.alert.unit}.
                     {active.alert.relativeSmsAt ? ' Родственник уведомлён SMS.' : ''}
-                    {active.alert.escalated ? ` Эскалирован дежурному в ${formatTime(active.alert.escalateAt)}.` : ''}
                   </li>
                 )}
                 {messages.map((message) => (

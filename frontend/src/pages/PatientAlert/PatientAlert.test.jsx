@@ -49,7 +49,6 @@ describe('PatientAlert', () => {
     expect(screen.getByText(/Критический порог — ниже 3,9 или выше 13,9 ммоль\/л/)).toBeInTheDocument()
     expect(screen.getByText('Врач Смирнова Е. А.')).toBeInTheDocument()
     expect(screen.getByText('Сын, Ковалёв Д.')).toBeInTheDocument()
-    expect(screen.getByText(/Если врач не ответит до/)).toBeInTheDocument()
     expect(screen.getByText(/Выпейте стакан сладкого сока/)).toBeInTheDocument()
 
     expect(screen.getByRole('link', { name: 'Вызвать скорую — 103' })).toHaveAttribute('href', 'tel:103')

@@ -77,7 +77,6 @@ const RECORD = {
     { label: 'Критический порог', value: 'ниже 3,9 или выше 13,9 ммоль/л' },
     { label: 'Цель', value: '4,4–10,0 ммоль/л' },
   ],
-  escalationMinutes: 15,
   lastMeasurementAt: NOW,
 }
 
@@ -105,7 +104,7 @@ describe('Record', () => {
     expect(screen.getByText('подписано 27.08.2026')).toBeInTheDocument()
     expect(screen.getByText('натощак')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Принять алерт' })).toBeInTheDocument()
-    expect(screen.getByText('через 15 мин без реакции → дежурный врач')).toBeInTheDocument()
+    expect(screen.getByText('активный критический алерт')).toBeInTheDocument()
   })
 
   it('принимает алерт с комментарием', async () => {

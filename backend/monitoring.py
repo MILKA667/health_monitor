@@ -25,7 +25,7 @@ DEFAULT_THRESHOLDS = {
     'pef': (Decimal(50), Decimal(80), None, None),
 }
 THRESHOLD_FIELDS = ('crit_low', 'warn_low', 'warn_high', 'crit_high')
-DEFAULT_SETTINGS = {'escalation_minutes': 15, 'sms_relative': True, 'no_data_alert': True}
+DEFAULT_SETTINGS = {'sms_relative': True, 'no_data_alert': True}
 
 NO_DATA_DAYS = 2
 LEVEL_ORDER = {'crit': 0, 'warn': 1, 'none': 2, 'ok': 3}
@@ -68,7 +68,7 @@ def load_thresholds(cur, patient):
 
 def load_settings(cur, patient):
     cur.execute(
-        """SELECT escalation_minutes, sms_relative, no_data_alert FROM alert_settings
+        """SELECT sms_relative, no_data_alert FROM alert_settings
            WHERE patient_id = %s OR nosology = %s
            ORDER BY patient_id NULLS LAST LIMIT 1""",
         (patient['user_id'], patient['nosology']),
@@ -129,7 +129,7 @@ def target_text(patient, thresholds):
 
 def record_measurement(cur, patient, kind, value, value2=None, source='manual', device_id=None,
                        context=None, wellbeing=(), measured_at=None):
-    """Сохраняет измерение и при отклонении создаёт алерт. Возвращает (measurement, alert | None)."""
+    """Сохраняет измерение и при отклонении создаёт алерт лечащему врачу. Возвращает (measurement, alert | None)."""
     cur.execute(
         """INSERT INTO measurements (patient_id, kind, value, value2, source, device_id, context, wellbeing, measured_at)
            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, COALESCE(%s, now()))
@@ -143,11 +143,9 @@ def record_measurement(cur, patient, kind, value, value2=None, source='manual', 
 
     settings = load_settings(cur, patient)
     cur.execute(
-        """INSERT INTO alerts (patient_id, measurement_id, level, rule, created_at, escalate_at)
-           VALUES (%s, %s, %s, %s, %s, CASE WHEN %s = 'crit' THEN %s + make_interval(mins => %s) END)
-           RETURNING *""",
-        (patient['user_id'], measurement['id'], level, rule, measurement['measured_at'],
-         level, measurement['measured_at'], settings['escalation_minutes']),
+        """INSERT INTO alerts (patient_id, measurement_id, level, rule, created_at)
+           VALUES (%s, %s, %s, %s, %s) RETURNING *""",
+        (patient['user_id'], measurement['id'], level, rule, measurement['measured_at']),
     )
     alert = cur.fetchone()
 

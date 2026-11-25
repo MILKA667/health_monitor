@@ -10,7 +10,6 @@ const LEVEL_LABELS = { crit: 'Критично', warn: 'Внимание', nodat
 
 function reaction(item) {
   if (item.responseMinutes !== null) return `принят через ${item.responseMinutes} мин · ${item.acceptedBy}`
-  if (item.escalated) return 'эскалирован дежурному врачу'
   return 'ожидает'
 }
 
@@ -204,7 +203,6 @@ function ResponseSection({ response }) {
       <dl className="report__facts report__facts--tight">
         <div><dt>Всего алертов</dt><dd className="num">{response.summary.total}</dd></div>
         <div><dt>Критических</dt><dd className="num">{response.summary.crit}</dd></div>
-        <div><dt>Эскалировано</dt><dd className="num">{response.summary.escalated}</dd></div>
         <div>
           <dt>Среднее время реакции</dt>
           <dd className="num">

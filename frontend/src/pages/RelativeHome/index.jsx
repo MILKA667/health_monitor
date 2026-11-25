@@ -22,9 +22,11 @@ function when(iso) {
 function timeline(alert) {
   const events = [{ time: alert.createdAt, text: 'Врач получил уведомление' }]
   if (alert.relativeSmsAt) events.push({ time: alert.relativeSmsAt, text: 'Вам отправлено SMS' })
-  if (alert.acceptedAt) events.push({ time: alert.acceptedAt, text: `Врач ${alert.acceptedBy} — алерт принят` })
-  else if (alert.escalated) events.push({ time: alert.escalateAt, text: 'Передано дежурному врачу' })
-  else if (alert.escalateAt) events.push({ time: alert.escalateAt, text: 'Ожидается реакция врача', muted: true })
+  if (alert.acceptedAt) {
+    events.push({ time: alert.acceptedAt, text: `Врач ${alert.acceptedBy} — алерт принят` })
+  } else {
+    events.push({ text: 'Ожидается реакция врача', muted: true })
+  }
   return events
 }
 
@@ -103,7 +105,7 @@ function RelativeHome() {
           <ol className="relative-timeline">
             {timeline(alert).map((event) => (
               <li key={`${event.time}-${event.text}`} className={event.muted ? 'relative-timeline__muted' : undefined}>
-                <span className="num relative-timeline__time">{formatTime(event.time)}</span>
+                {event.time && <span className="num relative-timeline__time">{formatTime(event.time)}</span>}
                 <span>{event.text}</span>
               </li>
             ))}
