@@ -1,0 +1,33 @@
+.text-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-6);
+}
+
+.text-tabs__tab {
+  height: 40px;
+  padding: 0 var(--s-1);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.text-tabs__tab:hover {
+  color: var(--text);
+}
+
+.text-tabs__tab[aria-selected='true'] {
+  border-bottom-color: var(--primary);
+  color: var(--text);
+  font-weight: 600;
+}
+
+@media (max-width: 700px) {
+  .text-tabs__tab {
+    height: var(--control-h-touch);
+  }
+}

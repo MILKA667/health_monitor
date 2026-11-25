@@ -1,0 +1,55 @@
+.password-page {
+  gap: var(--s-4);
+}
+
+.password-page__back {
+  display: flex;
+  align-items: center;
+  min-height: var(--control-h-touch);
+  color: var(--primary);
+  font-size: var(--tm-body);
+  text-decoration: none;
+}
+
+.password-page__error {
+  margin-top: calc(-1 * var(--s-2));
+  color: var(--crit);
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.password-page__done {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--r-control);
+}
+
+.password-page__done-title {
+  font-weight: 600;
+}
+
+.password-page__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 56px;
+  cursor: pointer;
+}
+
+.password-page__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.password-page__check {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--primary);
+}

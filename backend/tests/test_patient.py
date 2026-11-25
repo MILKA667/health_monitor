@@ -1,0 +1,308 @@
+from helpers import login
+
+from db import db_cursor
+
+
+def test_home_requires_patient(client, demo):
+    assert client.get('/api/patient/home').status_code == 401
+    login(client, 'doctor@demo.ru')
+    assert client.get('/api/patient/home').status_code == 403
+
+
+def test_home(client, demo):
+    login(client, '+79000000102')
+    home = client.get('/api/patient/home').get_json()
+
+    assert home['name'] == 'Ковалёва Н. П.'
+    assert home['kind'] == 'glucose' and home['kindTitle'] == 'Глюкоза крови'
+    assert home['target'] == '4,4–10,0 ммоль/л'
+    assert home['last']['value'] == '2,9' and home['last']['level'] == 'crit'
+    assert home['last']['deviation'] == '−1,0 ниже 3,9'
+    assert [row['value'] for row in home['recent']] == ['3,4', '3,8', '4,6']
+
+    plan = home['plan']
+    assert plan['total'] == 3 and plan['done'] == 3
+    assert [item['time'] for item in plan['items']] == ['09:00', '10:30', '19:00']
+    medication = plan['items'][0]
+    assert medication['type'] == 'medication' and medication['title'] == 'Метформин 1000 мг'
+    assert medication['subtitle'] == '1 таблетка после завтрака' and medication['done'] is True
+    reminder = plan['items'][1]
+    assert reminder['type'] == 'measurement' and reminder['title'] == 'Замер глюкозы натощак'
+    assert reminder['subtitle'] == 'Данные передаст устройство'
+
+
+def test_toggle_medication_intake(client, demo):
+    login(client, '+79000000102')
+    home = client.get('/api/patient/home').get_json()
+    slot_id = home['plan']['items'][0]['slotId']
+
+    assert client.post(f'/api/patient/plan/medications/{slot_id}', json={'done': False}).get_json() == {'done': False}
+    assert client.get('/api/patient/home').get_json()['plan']['done'] == 2
+    assert client.post(f'/api/patient/plan/medications/{slot_id}', json={'done': True}).get_json() == {'done': True}
+    assert client.get('/api/patient/home').get_json()['plan']['done'] == 3
+
+    with db_cursor() as cur:
+        cur.execute("SELECT count(*) AS n FROM audit_log WHERE action = 'medication_intake'")
+        assert cur.fetchone()['n'] == 2
+
+
+def test_add_measurement_creates_critical_alert(client, demo):
+    login(client, '+79000000102')
+    response = client.post('/api/patient/measurements', json={
+        'kind': 'glucose', 'value': '3,1', 'context': 'fast', 'wellbeing': ['weak', 'dizzy'],
+    })
+    assert response.status_code == 201
+    payload = response.get_json()
+    assert payload['measurement']['value'] == '3,1'
+    assert payload['measurement']['level'] == 'crit'
+    assert payload['alert']['level'] == 'crit'
+    assert payload['alert']['rule'] == 'ниже критического порога 3,9'
+
+    with db_cursor() as cur:
+        cur.execute('SELECT context, wellbeing, source FROM measurements ORDER BY id DESC LIMIT 1')
+        row = cur.fetchone()
+        assert (row['context'], row['wellbeing'], row['source']) == ('fast', ['weak', 'dizzy'], 'manual')
+        cur.execute("SELECT count(*) AS n FROM alerts WHERE level = 'crit' AND accepted_at IS NULL")
+        assert cur.fetchone()['n'] == 3  # Ковалёва 2,9, Савельев 182/108 и новый 3,1
+
+
+def test_add_measurement_within_target(client, demo):
+    login(client, '+79000000102')
+    response = client.post('/api/patient/measurements', json={'kind': 'glucose', 'value': '6,2', 'context': 'night'})
+    assert response.status_code == 201
+    assert response.get_json()['alert'] is None
+    assert response.get_json()['measurement']['level'] == 'ok'
+
+
+def test_measurement_validation(client, demo):
+    login(client, '79000000103')  # Савельев, гипертония
+    assert client.post('/api/patient/measurements', json={'kind': 'glucose', 'value': 'abn'}).status_code == 400
+    assert client.post('/api/patient/measurements', json={'kind': 'glucose', 'value': '40'}).status_code == 400
+    assert client.post('/api/patient/measurements', json={'kind': 'pef', 'value': '10'}).status_code == 400
+    assert client.post('/api/patient/measurements', json={'kind': 'bp', 'value': '120'}).get_json()['error'] == \
+        'Верхнее 60–260, нижнее 30–160 и меньше верхнего.'
+    assert client.post('/api/patient/measurements', json={'kind': 'bp', 'value': '220', 'value2': '110'}).status_code == 201
+
+
+def test_latest_alert_for_patient(client, demo):
+    login(client, '+79000000102')
+    alert = client.get('/api/patient/alerts/latest').get_json()
+
+    assert alert['value'] == '2,9' and alert['unit'] == 'ммоль/л'
+    assert alert['threshold'] == 'ниже 3,9 или выше 13,9 ммоль/л'
+    assert alert['doctor'] == {'name': 'Смирнова Е. А.'}
+    assert alert['relative'] == {'label': 'Сын, Ковалёв Д.'}
+    assert alert['relativeSmsAt'] is not None
+    assert alert['memo']['author'] == 'Смирнова Е. А.'
+    assert alert['memo']['text'].startswith('Нина Петровна, примите 15–20 г')
+    assert alert['escalated'] is False
+
+
+def test_patient_cannot_touch_foreign_slot(client, demo):
+    login(client, '+79000000103')
+    assert client.post('/api/patient/plan/medications/1', json={'done': True}).status_code == 404
+
+
+def test_history(client, demo):
+    login(client, '+79000000102')
+    data = client.get('/api/patient/measurements?days=14').get_json()
+
+    assert data['days'] == 14 and data['kind'] == 'glucose'
+    assert data['stats'][0] == {'label': 'Среднее', 'value': '3,7'}
+    assert [measurement['value'] for measurement in data['measurements']] == ['2,9', '3,4', '3,8', '4,6']
+    assert data['measurements'][0]['context'] == 'Натощак'
+    assert data['chart']['series'][0]['id'] == 'glucose'
+    assert data['chart']['bands'] == [{'from': 4.4, 'to': 10.0}]
+    assert client.get('/api/patient/measurements?days=7').get_json()['days'] == 7
+    assert client.get('/api/patient/measurements?days=30').status_code == 400
+
+
+def test_history_requires_patient(client, demo):
+    assert client.get('/api/patient/measurements').status_code == 401
+    login(client, 'doctor@demo.ru')
+    assert client.get('/api/patient/measurements').status_code == 403
+
+
+def test_reminders_list(client, demo):
+    login(client, '+79000000102')
+    data = client.get('/api/patient/reminders').get_json()
+
+    assert data['kind'] == 'glucose'
+    assert [(row['time'], row['enabled']) for row in data['medications']] == [('09:00', True), ('19:00', True)]
+    assert data['medications'][0]['title'] == 'Метформин 1000 мг'
+    assert data['measurements'] == [{
+        'id': 1, 'title': 'Замер глюкозы натощак', 'subtitle': 'каждый день', 'time': '10:30', 'enabled': True}]
+    assert data['addOptions'] == [{'id': 'glucose', 'label': 'Глюкоза крови'}]
+
+
+def test_toggle_medication_reminder(client, demo):
+    login(client, '+79000000102')
+    slot_id = client.get('/api/patient/reminders').get_json()['medications'][0]['id']
+
+    assert client.post(f'/api/patient/reminders/medications/{slot_id}', json={'enabled': False}).get_json() == {
+        'enabled': False}
+    reminders = client.get('/api/patient/reminders').get_json()
+    assert reminders['medications'][0]['enabled'] is False
+    assert client.get('/api/patient/home').get_json()['plan']['total'] == 2
+
+    assert client.post(f'/api/patient/reminders/medications/{slot_id}', json={'enabled': True}).status_code == 200
+    assert client.get('/api/patient/home').get_json()['plan']['total'] == 3
+
+    with db_cursor() as cur:
+        cur.execute("SELECT count(*) AS n FROM audit_log WHERE action = 'reminder_changed'")
+        assert cur.fetchone()['n'] == 2
+
+
+def test_toggle_measurement_reminder(client, demo):
+    login(client, '+79000000102')
+    reminder_id = client.get('/api/patient/reminders').get_json()['measurements'][0]['id']
+
+    assert client.post(f'/api/patient/reminders/measurements/{reminder_id}', json={'enabled': False}).status_code == 200
+    assert client.get('/api/patient/home').get_json()['plan']['total'] == 2
+    assert client.post(f'/api/patient/reminders/measurements/{reminder_id}', json={'enabled': True}).status_code == 200
+    assert client.get('/api/patient/home').get_json()['plan']['total'] == 3
+
+
+def test_add_measurement_reminder(client, demo):
+    login(client, '+79000000102')
+    response = client.post('/api/patient/reminders/measurements', json={'kind': 'glucose', 'time': '21:00'})
+    assert response.status_code == 201
+    assert response.get_json()['reminder']['time'] == '21:00'
+
+    reminders = client.get('/api/patient/reminders').get_json()['measurements']
+    assert [row['time'] for row in reminders] == ['10:30', '21:00']
+    assert client.post('/api/patient/reminders/measurements', json={'kind': 'glucose', 'time': '25:00'}).status_code == 400
+    assert client.post('/api/patient/reminders/measurements', json={'kind': 'bp', 'time': '08:00'}).status_code == 400
+
+    with db_cursor() as cur:
+        cur.execute("SELECT count(*) AS n FROM audit_log WHERE action = 'reminder_added'")
+        assert cur.fetchone()['n'] == 1
+
+
+def test_reminders_do_not_touch_foreign_patient(client, demo):
+    login(client, '+79000000103')
+    assert client.post('/api/patient/reminders/medications/1', json={'enabled': False}).status_code == 404
+    assert client.post('/api/patient/reminders/measurements/1', json={'enabled': False}).status_code == 404
+
+
+def test_chat(client, demo):
+    login(client, '+79000000102')
+    data = client.get('/api/patient/chat').get_json()
+
+    assert data['doctor'] == {'name': 'Смирнова Е. А.', 'specialty': 'эндокринолог',
+                              'hours': 'отвечает с 9:00 до 18:00'}
+    assert [(message['authorShort'], message['mine']) for message in data['messages']] == [
+        ('Ковалёва Н. П.', True), ('Смирнова Е. А.', False), ('Ковалёва Н. П.', True)]
+    assert data['alert']['value'] == '2,9' and data['alert']['unit'] == 'ммоль/л'
+
+    with db_cursor() as cur:
+        cur.execute("SELECT count(*) AS n FROM audit_log WHERE action = 'chat_viewed'")
+        assert cur.fetchone()['n'] == 1
+
+
+def test_chat_send_adds_unread_for_doctor(client, make_client, demo):
+    login(client, '+79000000102')
+    response = client.post('/api/patient/chat', json={'body': 'Спасибо, стало лучше.'})
+    assert response.status_code == 201
+    assert response.get_json()['mine'] is True
+    assert client.post('/api/patient/chat', json={'body': '   '}).status_code == 400
+
+    doctor = make_client()
+    login(doctor, 'doctor@demo.ru')
+    conversation = doctor.get('/api/doctor/messages').get_json()['conversations'][0]
+    assert conversation['unread'] == 2
+    assert conversation['lastMessage']['body'] == 'Спасибо, стало лучше.'
+    assert conversation['lastMessage']['mine'] is False
+
+
+def test_chat_requires_patient(client, demo):
+    assert client.get('/api/patient/chat').status_code == 401
+    login(client, 'doctor@demo.ru')
+    assert client.get('/api/patient/chat').status_code == 403
+
+
+def test_profile(client, demo):
+    login(client, '+79000000102')
+    profile = client.get('/api/patient/profile').get_json()
+
+    assert profile['name'] == 'Ковалёва Нина Петровна'
+    assert profile['phoneMasked'] == '+7 ••• ••• 01 02'
+    assert profile['doctor'] == {'name': 'Смирнова Е. А.', 'specialty': 'эндокринолог'}
+    assert profile['relative']['name'] == 'Ковалёв Дмитрий, сын'
+    assert profile['relative']['smsAlerts'] is True
+    assert [(device['kind'], device['connected']) for device in profile['devices']] == [('glucometer', True)]
+    assert profile['channels'] == {'push': True, 'sms': True}
+    assert profile['consents']['personalData'] is not None
+    assert profile['consents']['relativeAccess'] is not None
+    assert profile['passwordChangedAt'] is not None
+
+
+def test_profile_toggles(client, demo):
+    login(client, '+79000000102')
+
+    assert client.post('/api/patient/profile', json={'sms': False}).get_json()['channels'] == {
+        'push': True, 'sms': False}
+    assert client.post('/api/patient/profile', json={'relativeSms': False}).get_json()['relative']['smsAlerts'] is False
+    response = client.post('/api/patient/profile', json={'push': False})
+    assert response.status_code == 400
+    assert 'хотя бы один способ' in response.get_json()['error']
+
+    with db_cursor() as cur:
+        cur.execute("SELECT count(*) AS n FROM audit_log WHERE action = 'profile_updated'")
+        assert cur.fetchone()['n'] == 2
+
+
+def test_devices(client, demo):
+    login(client, '+79000000102')
+    device = client.get('/api/patient/devices').get_json()['devices'][0]
+    before = device['lastSync']
+
+    synced = client.post(f"/api/patient/devices/{device['id']}/sync").get_json()['device']
+    assert synced['lastSync'] >= before
+    assert client.post(f"/api/patient/devices/{device['id']}/connected", json={'connected': False}) \
+        .get_json()['device']['connected'] is False
+    assert client.post(f"/api/patient/devices/{device['id']}/connected", json={'connected': True}).status_code == 200
+    assert client.post('/api/patient/devices/connect', json={'kind': 'tonometer'}).status_code == 400
+
+    login(client, '+79000000103')
+    assert client.post('/api/patient/devices/1/sync').status_code == 404
+
+    login(client, '+79000000104')  # астма, устройства нет
+    assert client.get('/api/patient/devices').get_json()['devices'] == []
+    connected = client.post('/api/patient/devices/connect', json={'kind': 'peakflow'})
+    assert connected.status_code == 201
+    assert connected.get_json()['device']['kind'] == 'peakflow'
+    assert client.post('/api/patient/devices/connect', json={'kind': 'peakflow'}).status_code == 201
+
+
+def test_password_change(client, make_client, demo):
+    login(client, '+79000000102')
+    assert client.post('/api/patient/password', json={
+        'currentPassword': 'wrong', 'password': 'Newpass123'}).status_code == 400
+    assert client.post('/api/patient/password', json={
+        'currentPassword': 'demo1234', 'password': 'short'}).status_code == 400
+    assert client.post('/api/patient/password', json={
+        'currentPassword': 'demo1234', 'password': 'Newpass0102'}).status_code == 400
+
+    other = make_client()
+    login(other, '+79000000102')
+    response = client.post('/api/patient/password', json={
+        'currentPassword': 'demo1234', 'password': 'Newpass123', 'signOutOthers': False})
+    assert response.status_code == 200
+    assert response.get_json()['othersSignedOut'] is False
+    assert other.get('/api/patient/profile').status_code == 200
+    assert login(make_client(), '+79000000102', 'Newpass123')['role'] == 'patient'
+
+    second = make_client()
+    login(second, '+79000000102', 'Newpass123')
+    other2 = make_client()
+    login(other2, '+79000000102', 'Newpass123')
+    assert client.post('/api/patient/password', json={
+        'currentPassword': 'Newpass123', 'password': 'Another123', 'signOutOthers': True}).status_code == 200
+    assert other2.get('/api/patient/profile').status_code == 401
+    assert second.get('/api/patient/profile').status_code == 401
+    assert client.get('/api/patient/profile').status_code == 200
+
+    with db_cursor() as cur:
+        cur.execute("SELECT text FROM sms_outbox WHERE phone = '79000000102' ORDER BY id DESC LIMIT 1")
+        assert 'пароль изменён' in cur.fetchone()['text']

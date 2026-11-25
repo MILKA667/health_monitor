@@ -1,0 +1,16 @@
+.recover__masked {
+  color: var(--text);
+}
+
+.recover__code .field__control {
+  max-width: 200px;
+  font-family: var(--font-mono);
+  font-size: 20px;
+  letter-spacing: 6px;
+}
+
+.recover__resend {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}

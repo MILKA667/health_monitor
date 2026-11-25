@@ -1,0 +1,380 @@
+"""Админка: заявки на доступ, пользователи и журнал аудита."""
+import secrets
+import string
+from datetime import date
+
+from flask import Blueprint, jsonify, request
+from werkzeug.security import generate_password_hash
+
+from db import audit, db_cursor
+from security import current_user, error, login_required, mask_phone, short_name
+from sms import send_sms
+
+bp = Blueprint('admin', __name__, url_prefix='/api/admin')
+
+ROLE_LABELS = {'doctor': 'Врач', 'patient': 'Пациент', 'relative': 'Родственник', 'admin': 'Администратор'}
+NOSOLOGIES = {'diabetes': 'Сахарный диабет', 'hypertension': 'Гипертония', 'asthma': 'Астма'}
+SEXES = {'м': 'мужской', 'ж': 'женский'}
+
+ACTION_LABELS = {
+    'login': 'Вход',
+    'logout': 'Выход',
+    'login_failed': 'Неудачная попытка входа',
+    'login_blocked': 'Попытка входа в заблокированную запись',
+    'user_created': 'Создана учётная запись',
+    'user_blocked': 'Учётная запись заблокирована',
+    'user_unblocked': 'Учётная запись разблокирована',
+    'application_submitted': 'Подана заявка на доступ',
+    'applications_viewed': 'Открыт список заявок',
+    'application_approved': 'Заявка одобрена',
+    'application_rejected': 'Заявка отклонена',
+    'application_reverted': 'Решение по заявке отменено',
+    'password_reset': 'Пароль восстановлен',
+    'password_changed': 'Пароль изменён',
+    'first_login_completed': 'Завершён первый вход',
+    'recover_code_sent': 'Отправлен код восстановления',
+    'recover_code_failed': 'Неверный код восстановления',
+    'recover_code_ok': 'Код восстановления подтверждён',
+    'recover_unknown': 'Запрос восстановления для неизвестной записи',
+    'record_viewed': 'Открыта медкарта',
+    'alerts_viewed': 'Открыт список алертов',
+    'messages_viewed': 'Открыта переписка',
+    'chat_viewed': 'Открыт чат',
+    'relative_viewed': 'Открыт экран родственника',
+    'thresholds_saved': 'Изменены пороги',
+    'alert_accepted': 'Алерт принят',
+    'alert_accept_undone': 'Принятие алерта отменено',
+    'message_sent': 'Отправлено сообщение',
+    'measurement_added': 'Добавлено измерение',
+    'medication_intake': 'Отметка о приёме лекарства',
+    'reminder_changed': 'Изменено напоминание',
+    'reminder_added': 'Добавлено напоминание',
+    'profile_updated': 'Изменён профиль',
+    'device_connected': 'Устройство подключено',
+    'device_disconnected': 'Устройство отключено',
+    'device_synced': 'Устройство синхронизировано',
+    'report_created': 'Сформирован отчёт',
+    'report_viewed': 'Открыт отчёт',
+    'relative_notifications': 'Изменены уведомления родственника',
+}
+
+# Группы событий для фильтра журнала аудита
+ACTION_GROUPS = {
+    'data': ['record_viewed', 'alerts_viewed', 'messages_viewed', 'chat_viewed', 'relative_viewed',
+             'report_viewed', 'report_created', 'alert_accepted', 'alert_accept_undone'],
+    'account': ['login', 'logout', 'user_created', 'user_blocked', 'user_unblocked', 'application_submitted',
+                'application_approved', 'application_rejected', 'application_reverted', 'first_login_completed',
+                'thresholds_saved', 'applications_viewed'],
+    'security': ['login_failed', 'login_blocked', 'password_reset', 'password_changed', 'recover_code_sent',
+                 'recover_code_failed', 'recover_code_ok', 'recover_unknown'],
+    'notifications': ['message_sent', 'relative_notifications'],
+}
+SECURITY_ACTIONS = set(ACTION_GROUPS['security'])
+
+
+def temp_password():
+    """Временный пароль: буква, цифра и случайные символы — подходит под правила."""
+    alphabet = string.ascii_letters + string.digits
+    tail = ''.join(secrets.choice(alphabet) for _ in range(8))
+    return f"{secrets.choice(string.ascii_uppercase)}{secrets.choice(string.digits)}{tail}"
+
+
+def application_json(row):
+    return {
+        'id': row['id'],
+        'role': row['role'],
+        'roleLabel': ROLE_LABELS[row['role']],
+        'name': row['name'],
+        'phoneMasked': mask_phone(row['phone']),
+        'email': row['email'],
+        'extra': row['extra'],
+        'createdAt': row['created_at'].isoformat(),
+        'decidedAt': row['decided_at'].isoformat() if row['decided_at'] else None,
+        'status': row['status'],
+        'consentGiven': bool(row['consent_personal_data'] and row['consent_no_diagnosis']),
+    }
+
+
+@bp.get('/applications')
+@login_required('admin')
+def applications():
+    with db_cursor() as cur:
+        cur.execute(
+            """SELECT * FROM applications
+               WHERE status = 'pending' OR decided_at > now() - interval '30 days'
+               ORDER BY (status = 'pending') DESC, created_at DESC LIMIT 100"""
+        )
+        rows = cur.fetchall()
+        cur.execute(
+            """SELECT d.user_id, u.name FROM doctors d JOIN users u ON u.id = d.user_id
+               WHERE NOT u.is_blocked ORDER BY u.name"""
+        )
+        doctors = cur.fetchall()
+        cur.execute(
+            """SELECT p.user_id, u.name FROM patients p JOIN users u ON u.id = p.user_id
+               WHERE NOT u.is_blocked ORDER BY u.name"""
+        )
+        patients = cur.fetchall()
+        audit(cur, 'applications_viewed', current_user()['id'], None, request.remote_addr)
+
+    return jsonify({
+        'applications': [application_json(row) for row in rows],
+        'doctors': [{'id': row['user_id'], 'label': short_name(row['name'])} for row in doctors],
+        'patients': [{'id': row['user_id'], 'label': short_name(row['name'])} for row in patients],
+        'roles': [{'id': code, 'label': label} for code, label in ROLE_LABELS.items() if code != 'admin'],
+        'nosologies': [{'id': code, 'label': label} for code, label in NOSOLOGIES.items()],
+        'sexes': [{'id': code, 'label': label} for code, label in SEXES.items()],
+    })
+
+
+def parse_date(text):
+    try:
+        return date.fromisoformat(str(text))
+    except (TypeError, ValueError):
+        return None
+
+
+def approve_patient(cur, application, data):
+    try:
+        doctor_id = int(data.get('doctorId'))
+    except (TypeError, ValueError):
+        return error('Выберите лечащего врача.')
+    cur.execute("SELECT 1 FROM doctors d JOIN users u ON u.id = d.user_id WHERE d.user_id = %s AND NOT u.is_blocked",
+                (doctor_id,))
+    if not cur.fetchone():
+        return error('Врач не найден.')
+    birth = parse_date(data.get('birthDate'))
+    if not birth or birth >= date.today():
+        return error('Укажите дату рождения.')
+    if data.get('sex') not in SEXES:
+        return error('Укажите пол.')
+    if data.get('nosology') not in NOSOLOGIES:
+        return error('Выберите нозологию.')
+    diagnosis = str(data.get('diagnosis', '')).strip()
+    icd = str(data.get('icdCode', '')).strip()
+    if len(diagnosis) < 3 or len(icd) < 2:
+        return error('Укажите диагноз и код МКБ.')
+
+    password = temp_password()
+    try:
+        cur.execute(
+            """INSERT INTO users (role, name, phone, email, password_hash, must_change_password)
+               VALUES ('patient', %s, %s, %s, %s, TRUE) RETURNING id""",
+            (application['name'], application['phone'], application['email'], generate_password_hash(password)),
+        )
+    except Exception:
+        return error('С этим телефоном или e-mail уже есть учётная запись.', 409)
+    user_id = cur.fetchone()['id']
+    cur.execute(
+        """INSERT INTO patients (user_id, doctor_id, birth_date, sex, nosology, diagnosis, icd_code)
+           VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+        (user_id, doctor_id, birth, data.get('sex'), data.get('nosology'), diagnosis, icd),
+    )
+    return user_id, password
+
+
+def approve_relative(cur, application, data):
+    try:
+        patient_id = int(data.get('patientId'))
+    except (TypeError, ValueError):
+        return error('Выберите пациента, к которому открывается доступ.')
+    cur.execute('SELECT 1 FROM patients WHERE user_id = %s', (patient_id,))
+    if not cur.fetchone():
+        return error('Пациент не найден.')
+
+    password = temp_password()
+    try:
+        cur.execute(
+            """INSERT INTO users (role, name, phone, email, password_hash, must_change_password)
+               VALUES ('relative', %s, %s, %s, %s, TRUE) RETURNING id""",
+            (application['name'], application['phone'], application['email'], generate_password_hash(password)),
+        )
+    except Exception:
+        return error('С этим телефоном или e-mail уже есть учётная запись.', 409)
+    user_id = cur.fetchone()['id']
+    cur.execute(
+        'INSERT INTO relative_links (relative_id, patient_id) VALUES (%s, %s) ON CONFLICT (relative_id) DO NOTHING',
+        (user_id, patient_id),
+    )
+    return user_id, password
+
+
+def approve_doctor(cur, application, data):
+    specialty = str(data.get('specialty', '')).strip()
+    clinic = str(data.get('clinic', '')).strip()
+    if len(specialty) < 3 or len(clinic) < 3:
+        return error('Укажите специальность и клинику.')
+
+    password = temp_password()
+    try:
+        cur.execute(
+            """INSERT INTO users (role, name, phone, email, password_hash, must_change_password)
+               VALUES ('doctor', %s, %s, %s, %s, TRUE) RETURNING id""",
+            (application['name'], application['phone'], application['email'], generate_password_hash(password)),
+        )
+    except Exception:
+        return error('С этим телефоном или e-mail уже есть учётная запись.', 409)
+    user_id = cur.fetchone()['id']
+    cur.execute('INSERT INTO doctors (user_id, specialty, clinic) VALUES (%s, %s, %s)', (user_id, specialty, clinic))
+    return user_id, password
+
+
+APPROVERS = {'patient': approve_patient, 'relative': approve_relative, 'doctor': approve_doctor}
+
+
+@bp.post('/applications/<int:application_id>/approve')
+@login_required('admin')
+def approve(application_id):
+    admin = current_user()
+    data = request.get_json(silent=True) or {}
+    with db_cursor() as cur:
+        cur.execute('SELECT * FROM applications WHERE id = %s FOR UPDATE', (application_id,))
+        application = cur.fetchone()
+        if not application:
+            return error('Заявка не найдена.', 404)
+        if application['status'] == 'approved':
+            return error('Заявка уже одобрена.', 409)
+
+        # Повторное одобрение после отмены решения: возвращаем доступ, новую учётку не создаём
+        if application['approved_user_id']:
+            cur.execute('UPDATE users SET is_blocked = FALSE WHERE id = %s RETURNING id',
+                        (application['approved_user_id'],))
+            if not cur.fetchone():
+                return error('Учётная запись заявки не найдена.', 404)
+            user_id = application['approved_user_id']
+            password = None
+        else:
+            approver = APPROVERS.get(application['role'])
+            if not approver:
+                return error('Неизвестная роль заявки.')
+            result = approver(cur, application, data)
+            if isinstance(result, tuple) and len(result) == 2 and isinstance(result[1], int):
+                return result  # error(...)
+            user_id, password = result
+
+        cur.execute("UPDATE applications SET status = 'approved', approved_user_id = %s, decided_at = now() "
+                    "WHERE id = %s", (user_id, application_id))
+        if password:
+            send_sms(cur, application['phone'],
+                     f'HealthMonitor: доступ открыт. Временный пароль: {password}. '
+                     'При первом входе замените его.')
+        audit(cur, 'application_approved', admin['id'], f'application:{application_id}', request.remote_addr)
+    return jsonify({'ok': True, 'userId': user_id})
+
+
+@bp.post('/applications/<int:application_id>/reject')
+@login_required('admin')
+def reject(application_id):
+    admin = current_user()
+    with db_cursor() as cur:
+        cur.execute("UPDATE applications SET status = 'rejected', decided_at = now() "
+                    "WHERE id = %s AND status <> 'approved' RETURNING id", (application_id,))
+        if not cur.fetchone():
+            return error('Заявку нельзя отклонить: она одобрена или не найдена.', 409)
+        audit(cur, 'application_rejected', admin['id'], f'application:{application_id}', request.remote_addr)
+    return jsonify({'ok': True})
+
+
+@bp.post('/applications/<int:application_id>/revert')
+@login_required('admin')
+def revert(application_id):
+    admin = current_user()
+    with db_cursor() as cur:
+        cur.execute('SELECT * FROM applications WHERE id = %s FOR UPDATE', (application_id,))
+        application = cur.fetchone()
+        if not application or application['status'] == 'pending':
+            return error('Решение по заявке не найдено.', 404)
+        if application['approved_user_id']:
+            cur.execute('UPDATE users SET is_blocked = TRUE WHERE id = %s', (application['approved_user_id'],))
+        cur.execute("UPDATE applications SET status = 'pending', decided_at = NULL WHERE id = %s", (application_id,))
+        audit(cur, 'application_reverted', admin['id'], f'application:{application_id}', request.remote_addr)
+    return jsonify({'ok': True})
+
+
+@bp.get('/users')
+@login_required('admin')
+def users():
+    search = request.args.get('search', '').strip()
+    role = request.args.get('role', 'all')
+    if role not in ROLE_LABELS:
+        role = 'all'
+    me = current_user()
+    with db_cursor() as cur:
+        cur.execute(
+            """SELECT u.*,
+                      (SELECT max(a.created_at) FROM audit_log a
+                        WHERE a.user_id = u.id AND a.action = 'login') AS last_login
+               FROM users u
+               WHERE (%s = 'all' OR u.role = %s)
+                 AND (%s = '' OR u.name ILIKE %s OR coalesce(u.email, '') ILIKE %s OR coalesce(u.phone, '') LIKE %s)
+               ORDER BY u.name LIMIT 300""",
+            (role, role, search, f'%{search}%', f'%{search}%', f'%{search}%'),
+        )
+        rows = cur.fetchall()
+    return jsonify({'users': [{
+        'id': row['id'],
+        'name': row['name'],
+        'role': row['role'],
+        'roleLabel': ROLE_LABELS[row['role']],
+        'contact': mask_phone(row['phone']) if row['phone'] else row['email'],
+        'blocked': row['is_blocked'],
+        'isSelf': row['id'] == me['id'],
+        'lastLogin': row['last_login'].isoformat() if row['last_login'] else None,
+    } for row in rows]})
+
+
+@bp.post('/users/<int:user_id>/block')
+@login_required('admin')
+def block_user(user_id):
+    admin = current_user()
+    blocked = bool((request.get_json(silent=True) or {}).get('blocked'))
+    if user_id == admin['id']:
+        return error('Нельзя заблокировать самого себя.')
+    with db_cursor() as cur:
+        cur.execute('SELECT role, is_blocked FROM users WHERE id = %s FOR UPDATE', (user_id,))
+        row = cur.fetchone()
+        if not row:
+            return error('Пользователь не найден.', 404)
+        if blocked and row['role'] == 'admin':
+            cur.execute("SELECT count(*) AS n FROM users WHERE role = 'admin' AND NOT is_blocked")
+            if cur.fetchone()['n'] <= 1:
+                return error('Нельзя заблокировать последнего администратора.')
+        cur.execute('UPDATE users SET is_blocked = %s WHERE id = %s', (blocked, user_id))
+        audit(cur, 'user_blocked' if blocked else 'user_unblocked', admin['id'], f'user:{user_id}',
+              request.remote_addr, is_security=True)
+    return jsonify({'blocked': blocked})
+
+
+@bp.get('/audit')
+@login_required('admin')
+def audit_log():
+    group = request.args.get('type', 'all')
+    with db_cursor() as cur:
+        if group in ACTION_GROUPS:
+            cur.execute(
+                """SELECT a.*, u.name AS user_name FROM audit_log a
+                   LEFT JOIN users u ON u.id = a.user_id
+                   WHERE a.action = ANY(%s) ORDER BY a.created_at DESC LIMIT 200""",
+                (ACTION_GROUPS[group],),
+            )
+        else:
+            cur.execute(
+                """SELECT a.*, u.name AS user_name FROM audit_log a
+                   LEFT JOIN users u ON u.id = a.user_id
+                   ORDER BY a.created_at DESC LIMIT 200"""
+            )
+        rows = cur.fetchall()
+    return jsonify({
+        'groups': [{'id': 'all', 'label': 'Все события'}, {'id': 'data', 'label': 'Доступ к медданным'},
+                   {'id': 'account', 'label': 'Учётные записи и роли'}, {'id': 'security', 'label': 'Безопасность'},
+                   {'id': 'notifications', 'label': 'Уведомления'}],
+        'events': [{
+            'id': row['id'],
+            'createdAt': row['created_at'].isoformat(),
+            'who': short_name(row['user_name']) if row['user_name'] else 'Система',
+            'action': ACTION_LABELS.get(row['action'], row['action']),
+            'object': row['object'],
+            'ip': row['ip'],
+            'security': row['is_security'] or row['action'] in SECURITY_ACTIONS,
+        } for row in rows],
+    })

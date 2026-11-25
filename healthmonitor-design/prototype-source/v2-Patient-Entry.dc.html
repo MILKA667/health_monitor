@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Пациент — новый показатель</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#1D5FA8}
+:focus-visible{outline:2px solid #1D5FA8;outline-offset:2px}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.f{height:48px;box-sizing:border-box;padding:0 12px;border:1px solid #B9C0C8;border-radius:4px;background:#FFFFFF;font:inherit;font-size:17px;color:#1B1F24}
+.f:focus{border-color:#1D5FA8}
+.opt{display:flex;align-items:center;gap:12px;min-height:48px;border-bottom:1px solid #ECEEF1;cursor:pointer}
+.opt input{width:22px;height:22px;margin:0;accent-color:#1D5FA8}
+.pbtn{display:flex;align-items:center;justify-content:center;width:100%;height:52px;border:none;border-radius:4px;background:#1D5FA8;color:#FFFFFF;font:inherit;font-size:17px;font-weight:600;text-decoration:none;cursor:pointer}
+.pbtn:hover{background:#164C87;color:#FFFFFF}
+.pbtn:disabled{background:#F0F2F4;color:#8A939D;border:1px solid #D9DDE2;cursor:not-allowed}
+.back{display:flex;align-items:center;gap:4px;height:44px;color:#1D5FA8;text-decoration:none;font-size:17px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #1B1F24; font-size: 17px; line-height: 24px; overflow: hidden">
+
+<div style="padding: 44px 16px 0"><a class="back" href="v2-Patient-Home.dc.html"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5L7 10l5.5 5.5"></path></svg>Назад</a></div>
+
+<form style="flex-grow: 1; overflow-y: auto; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 20px">
+<h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">Новый показатель</h1>
+
+<label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 15px; font-weight: 500">Что измеряли</span>
+<select class="f" value="{{type}}" onChange="{{onType}}"><option value="g">Глюкоза крови</option><option value="p">Артериальное давление</option><option value="f">Пиковая скорость выдоха</option></select>
+</label>
+
+<sc-if value="{{isP}}" hint-placeholder-val="{{ false }}">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 15px; font-weight: 500">Верхнее, мм рт. ст.</span><input class="f num" inputmode="numeric" value="{{sys}}" onChange="{{onSys}}"></label>
+<label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 15px; font-weight: 500">Нижнее, мм рт. ст.</span><input class="f num" inputmode="numeric" value="{{dia}}" onChange="{{onDia}}"></label>
+</div>
+</sc-if>
+<sc-if value="{{notP}}" hint-placeholder-val="{{ true }}">
+<label style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 15px; font-weight: 500">{{valueLabel}}</span><input class="f num" inputmode="decimal" value="{{val}}" onChange="{{onVal}}" aria-invalid="{{invalid}}" style="{{valStyle}}"></label>
+</sc-if>
+<p style="{{msgStyle}}" role="status">{{msg}}</p>
+
+<fieldset style="border: none; margin: 0; padding: 0">
+<legend style="padding: 0; margin-bottom: 4px; font-size: 15px; font-weight: 500">Когда</legend>
+<sc-for list="{{ctx}}" as="c" hint-placeholder-count="3">
+<label class="opt"><input type="radio" name="ctx" checked="{{c.checked}}" onChange="{{c.pick}}">{{c.label}}</label>
+</sc-for>
+</fieldset>
+
+<fieldset style="border: none; margin: 0; padding: 0">
+<legend style="padding: 0; margin-bottom: 4px; font-size: 15px; font-weight: 500">Самочувствие (можно несколько)</legend>
+<sc-for list="{{feel}}" as="c" hint-placeholder-count="4">
+<label class="opt"><input type="checkbox" checked="{{c.checked}}" onChange="{{c.pick}}">{{c.label}}</label>
+</sc-for>
+</fieldset>
+<p style="margin: 0; font-size: 15px; line-height: 20px; color: #4A535D">Время замера: сегодня, <span class="num">10:38</span>.</p>
+</form>
+
+<div style="padding: 12px 16px 32px; border-top: 1px solid #D9DDE2">
+<sc-if value="{{valid}}" hint-placeholder-val="{{ true }}"><a class="pbtn" href="{{saveHref}}">Сохранить</a></sc-if>
+<sc-if value="{{invalidFlag}}" hint-placeholder-val="{{ false }}"><button type="button" class="pbtn" disabled="{{ true }}">Сохранить</button></sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { type: 'g', val: { g: '2,9', f: '' }, sys: '', dia: '', ctx: 'fast', feel: { dizzy: true, weak: true } };
+  }
+  renderVals() {
+    var self = this, s = this.state;
+    var n = function (x) { return parseFloat(String(x || '').replace(',', '.')); };
+    var valid = false, crit = false, msg = '', level = 'info';
+    if (s.type === 'p') {
+      var a = n(s.sys), b = n(s.dia);
+      if (isNaN(a) || isNaN(b)) { msg = 'Введите оба значения. Цель — ниже 140/90.'; }
+      else if (a < 60 || a > 260 || b < 30 || b > 160 || b >= a) { msg = 'Проверьте значения: верхнее 60–260, нижнее 30–160 и меньше верхнего.'; level = 'err'; }
+      else { valid = true; crit = a >= 160 || b >= 100; msg = crit ? 'Выше критического порога 160/100. После сохранения врач получит уведомление сразу.' : 'Цель — ниже 140/90.'; }
+    } else {
+      var v = n(s.val[s.type]);
+      var lim = s.type === 'g' ? [1, 35] : [50, 900];
+      if (isNaN(v)) { msg = s.type === 'g' ? 'Цель — 4,4–10,0 ммоль/л.' : 'Лучший из трёх выдохов. Ваш лучший результат — 470 л/мин.'; }
+      else if (v < lim[0] || v > lim[1]) { msg = 'Допустимо от ' + String(lim[0]).replace('.', ',') + ' до ' + lim[1] + '. Проверьте значение.'; level = 'err'; }
+      else {
+        valid = true;
+        crit = s.type === 'g' ? (v < 3.9 || v > 13.9) : v < 235;
+        msg = crit ? (s.type === 'g' ? 'Вне критического порога 3,9–13,9. ' : 'Ниже 50% от лучшего результата. ') + 'После сохранения врач получит уведомление сразу.' : (s.type === 'g' ? 'Цель — 4,4–10,0 ммоль/л.' : 'Лучший результат — 470 л/мин.');
+      }
+    }
+    if (crit) level = 'crit';
+    var C = { info: '#4A535D', err: '#B42318', crit: '#B42318' };
+    var opt = function (list, key, multi) {
+      return list.map(function (o) {
+        var on = multi ? !!s[key][o[0]] : s[key] === o[0];
+        return { label: o[1], checked: on, pick: function () {
+          if (multi) { var m = Object.assign({}, self.state[key]); m[o[0]] = !on; var u = {}; u[key] = m; self.setState(u); }
+          else { var u2 = {}; u2[key] = o[0]; self.setState(u2); }
+        } };
+      });
+    };
+    return {
+      type: s.type, isP: s.type === 'p', notP: s.type !== 'p',
+      valueLabel: s.type === 'g' ? 'Значение, ммоль/л' : 'Значение, л/мин',
+      val: s.val[s.type] || '', sys: s.sys, dia: s.dia,
+      invalid: level === 'err' ? 'true' : 'false',
+      valStyle: level === 'err' ? 'border-color: #B42318' : '',
+      msg: msg, msgStyle: 'margin: -12px 0 0; font-size: 15px; line-height: 20px; color: ' + C[level] + (level === 'crit' ? '; font-weight: 500' : ''),
+      valid: valid, invalidFlag: !valid,
+      saveHref: crit ? 'v2-Patient-Alert.dc.html' : 'v2-Patient-Home.dc.html',
+      ctx: opt([['fast', 'Натощак'], ['after', 'Через 2 часа после еды'], ['night', 'Перед сном']], 'ctx', false),
+      feel: opt([['good', 'Чувствую себя как обычно'], ['weak', 'Слабость'], ['dizzy', 'Головокружение'], ['sweat', 'Потливость, дрожь']], 'feel', true),
+      onType: function (e) { self.setState({ type: e.target.value }); },
+      onVal: function (e) { var m = Object.assign({}, self.state.val); m[self.state.type] = e.target.value; self.setState({ val: m }); },
+      onSys: function (e) { self.setState({ sys: e.target.value }); },
+      onDia: function (e) { self.setState({ dia: e.target.value }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+.worklist-group__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 var(--s-4);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-sub);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.worklist-group__chev {
+  flex-shrink: 0;
+}
+
+.worklist-group__head[aria-expanded='true'] .worklist-group__chev {
+  transform: rotate(90deg);
+}
+
+.worklist-group__count {
+  font-weight: 400;
+  color: var(--text-2);
+}
+
+@media (max-width: 700px) {
+  .worklist-group__head {
+    height: var(--control-h-touch);
+  }
+}

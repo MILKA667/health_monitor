@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Медкарта пациента</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F6F7F8}
+a{color:#1D5FA8}a:hover{color:#164C87}
+:focus-visible{outline:2px solid #1D5FA8;outline-offset:2px}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border-radius:4px;border:1px solid #B9C0C8;background:#FFFFFF;color:#1B1F24;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#F0F2F4;color:#1B1F24}
+.btn-primary{background:#1D5FA8;border-color:#1D5FA8;color:#FFFFFF}.btn-primary:hover{background:#164C87;border-color:#164C87;color:#FFFFFF}
+.btn-danger{background:#B42318;border-color:#B42318;color:#FFFFFF}.btn-danger:hover{background:#912018;border-color:#912018;color:#FFFFFF}
+.btn:disabled{background:#F0F2F4;border-color:#D9DDE2;color:#8A939D;cursor:not-allowed}
+.nav{display:flex;align-items:center;height:48px;padding:0 4px;color:#4A535D;text-decoration:none;border-bottom:2px solid transparent;box-sizing:border-box}
+.nav:hover{color:#1B1F24}
+.cnt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;margin-left:6px;border-radius:9px;background:#B42318;color:#FFFFFF;font-size:11px;font-weight:600}
+.tab{height:40px;padding:0 4px;border:none;border-bottom:2px solid transparent;background:none;font:inherit;font-size:14px;color:#4A535D;cursor:pointer}
+.tab:hover{color:#1B1F24}
+.seg{height:28px;padding:0 10px;border:1px solid #B9C0C8;background:#FFFFFF;font:inherit;font-size:13px;color:#4A535D;cursor:pointer;margin-left:-1px}
+.field{height:32px;box-sizing:border-box;padding:0 10px;border:1px solid #B9C0C8;border-radius:4px;background:#FFFFFF;font:inherit;font-size:14px;color:#1B1F24}
+th{text-align:left;font-weight:500;font-size:12px;line-height:16px;color:#646E78;padding:6px 16px;border-bottom:1px solid #D9DDE2}
+td{padding:8px 16px;border-bottom:1px solid #ECEEF1;vertical-align:top}
+@media (max-width:700px){.btn,.field{height:44px}.tab{height:44px}.seg{height:40px}}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F6F7F8; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #1B1F24; font-size: 14px; line-height: 20px; display: flex; flex-direction: column">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px 24px; padding: 0 24px; background: #FFFFFF; border-bottom: 1px solid #D9DDE2">
+<span style="font-weight: 600; font-size: 15px">HealthMonitor</span>
+<nav aria-label="Разделы" style="display: flex; flex-wrap: wrap; gap: 0 20px; flex-grow: 1">
+<a class="nav" href="v2-Worklist.dc.html" aria-current="page" style="color: #1B1F24; font-weight: 600; border-bottom-color: #1D5FA8">Пациенты</a>
+<a class="nav" href="v2-Alerts.dc.html">Алерты<span class="cnt">2</span></a>
+<a class="nav" href="v2-Messages.dc.html">Сообщения</a>
+<a class="nav" href="v2-Reports.dc.html">Отчёты</a>
+<a class="nav" href="v2-Thresholds.dc.html">Пороги</a>
+</nav>
+<span style="font-size: 13px; color: #4A535D">Смирнова Е. А. · эндокринолог · <a href="v2-Login.dc.html">Выйти</a></span>
+</header>
+
+<section aria-label="Пациент" style="background: #FFFFFF; border-bottom: 1px solid #D9DDE2; padding: 16px 24px 0">
+<div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px">
+<h1 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600">Ковалёва Нина Петровна</h1>
+<span style="color: #4A535D">жен., 67 лет · Сахарный диабет 2 типа (E11)</span>
+</div>
+<dl style="margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 4px 24px; font-size: 13px">
+<div style="display: flex; gap: 6px"><dt style="color: #646E78">Полис</dt><dd class="num" style="margin: 0">…4821</dd></div>
+<div style="display: flex; gap: 6px"><dt style="color: #646E78">В программе с</dt><dd class="num" style="margin: 0">02.10.2026</dd></div>
+<div style="display: flex; gap: 6px"><dt style="color: #646E78">Устройство</dt><dd style="margin: 0">глюкометр, синхр. 10:38</dd></div>
+<div style="display: flex; gap: 6px"><dt style="color: #646E78">Родственник</dt><dd style="margin: 0">Ковалёв Д. С., сын, +7 ••• ••• 41 07</dd></div>
+<div style="display: flex; gap: 6px"><dt style="color: #646E78">Согласие на обработку ПДн</dt><dd style="margin: 0">подписано 02.10.2026</dd></div>
+</dl>
+
+<div style="{{alertBox}}">
+<div style="flex: 1 1 360px; display: flex; flex-direction: column">
+<span style="font-weight: 600">{{alertTitle}}</span>
+<span>{{alertText}}</span>
+</div>
+<sc-if value="{{pending}}" hint-placeholder-val="{{ true }}">
+<label style="flex: 1 1 280px; display: flex"><span class="vh">Комментарий к принятию алерта</span><input class="field" type="text" placeholder="Комментарий (необязательно)" value="{{note}}" onChange="{{onNote}}" style="flex-grow: 1; min-width: 0"></label>
+<button type="button" class="btn btn-danger" onClick="{{accept}}">Принять алерт</button>
+</sc-if>
+<sc-if value="{{accepted}}" hint-placeholder-val="{{ false }}">
+<button type="button" class="btn" onClick="{{undo}}">Отменить</button>
+</sc-if>
+</div>
+
+<div role="tablist" aria-label="Разделы медкарты" style="display: flex; flex-wrap: wrap; gap: 24px; margin-top: 8px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+<button type="button" role="tab" class="tab" aria-selected="{{t.selected}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+</sc-for>
+</div>
+</section>
+
+<main style="flex-grow: 1; padding: 16px 24px 32px">
+
+<sc-if value="{{isVitals}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-wrap: wrap; background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px">
+<section aria-label="График глюкозы" style="flex: 3 1 520px; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px">
+<h2 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">Глюкоза крови, ммоль/л</h2>
+<div role="group" aria-label="Период" style="display: flex; padding-left: 1px">
+<sc-for list="{{periods}}" as="p" hint-placeholder-count="3">
+<button type="button" class="seg" aria-pressed="{{p.pressed}}" onClick="{{p.pick}}" style="{{p.style}}">{{p.label}}</button>
+</sc-for>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 13px; color: #4A535D">
+<span>Среднее <span class="num" style="color: #1B1F24">{{avg}}</span></span>
+<span>Мин. <span class="num" style="color: #B42318">{{min}}</span></span>
+<span>Макс. <span class="num" style="color: #1B1F24">{{max}}</span></span>
+<span>Вне цели <span class="num" style="color: #1B1F24">{{outCount}}</span></span>
+</div>
+<svg role="img" aria-label="{{chartLabel}}" viewBox="0 0 760 240" style="width: 100%; height: auto; display: block" font-family="IBM Plex Mono, monospace" font-size="11">
+<rect x="40" y="59.2" width="712" height="131.8" fill="#F0F2F4"></rect>
+<g stroke="#ECEEF1"><line x1="40" y1="16" x2="752" y2="16"></line><line x1="40" y1="59.2" x2="752" y2="59.2"></line><line x1="40" y1="102.4" x2="752" y2="102.4"></line><line x1="40" y1="145.6" x2="752" y2="145.6"></line><line x1="40" y1="188.8" x2="752" y2="188.8"></line><line x1="40" y1="232" x2="752" y2="232"></line></g>
+<line x1="40" y1="191" x2="752" y2="191" stroke="#B42318" stroke-dasharray="3 3"></line>
+<line x1="40" y1="59.2" x2="752" y2="59.2" stroke="#D98A00" stroke-dasharray="3 3"></line>
+<g fill="#646E78" text-anchor="end"><text x="32" y="20">12</text><text x="32" y="63">10</text><text x="32" y="106">8</text><text x="32" y="149">6</text><text x="32" y="192">4</text></g>
+<text x="748" y="204" fill="#B42318" text-anchor="end">3,9</text>
+<text x="748" y="55" fill="#8A4B00" text-anchor="end">10,0</text>
+<polyline points="{{pts}}" fill="none" stroke="#1B1F24" stroke-width="1.6" stroke-linejoin="round"></polyline>
+<path d="{{outPath}}" fill="#B42318"></path>
+<path d="{{inPath}}" fill="#1B1F24"></path>
+</svg>
+<div style="display: flex; justify-content: space-between; font-size: 12px; color: #646E78; padding-left: 40px"><span class="num">{{firstDate}}</span><span class="num">28.10</span></div>
+</section>
+<section aria-label="Журнал измерений" style="flex: 2 1 340px; min-width: 0; border-left: 1px solid #D9DDE2">
+<h2 style="margin: 0; padding: 16px 16px 8px; font-size: 16px; line-height: 24px; font-weight: 600">Измерения</h2>
+<table style="width: 100%; border-collapse: collapse; font-size: 13px">
+<thead><tr><th scope="col">Дата, время</th><th scope="col" style="text-align: right">ммоль/л</th><th scope="col">Контекст</th><th scope="col">Источник</th></tr></thead>
+<tbody>
+<tr><td class="num">28.10 10:38</td><td class="num" style="text-align: right; font-weight: 600; color: #B42318">2,9</td><td>натощак</td><td>глюкометр</td></tr>
+<tr><td class="num">27.10 21:05</td><td class="num" style="text-align: right; font-weight: 600; color: #B42318">3,4</td><td>перед сном</td><td>глюкометр</td></tr>
+<tr><td class="num">27.10 08:12</td><td class="num" style="text-align: right; font-weight: 600; color: #B42318">3,8</td><td>натощак</td><td>глюкометр</td></tr>
+<tr><td class="num">26.10 08:30</td><td class="num" style="text-align: right">4,6</td><td>натощак</td><td>вручную</td></tr>
+<tr><td class="num">25.10 20:50</td><td class="num" style="text-align: right">5,0</td><td>перед сном</td><td>глюкометр</td></tr>
+<tr><td class="num">25.10 08:05</td><td class="num" style="text-align: right">5,4</td><td>натощак</td><td>глюкометр</td></tr>
+</tbody>
+</table>
+<dl style="margin: 0; padding: 12px 16px 16px; display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; font-size: 13px">
+<dt style="color: #646E78">Критический порог</dt><dd class="num" style="margin: 0">&lt; 3,9 или &gt; 13,9</dd>
+<dt style="color: #646E78">Внимание</dt><dd class="num" style="margin: 0">10,0–13,9</dd>
+<dt style="color: #646E78">Эскалация</dt><dd style="margin: 0">через 15 мин без реакции → дежурный врач</dd>
+</dl>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{isMeds}}" hint-placeholder-val="{{ false }}">
+<section aria-label="Назначения" style="background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; overflow-x: auto">
+<table style="width: 100%; min-width: 720px; border-collapse: collapse">
+<thead><tr><th scope="col">Препарат</th><th scope="col">Схема</th><th scope="col">Назначен</th><th scope="col">Приём за 14 дней</th><th scope="col">Последний приём</th></tr></thead>
+<tbody>
+<tr><td style="font-weight: 500">Метформин 1000 мг</td><td>2 раза в день, после еды</td><td class="num">02.10.2026</td><td><span class="num">26 / 28</span> <span style="color: #4A535D">· 93%</span></td><td class="num">28.10 09:04</td></tr>
+<tr><td style="font-weight: 500">Гликлазид МВ 60 мг</td><td>1 раз в день, утром</td><td class="num">02.10.2026</td><td><span class="num">14 / 14</span> <span style="color: #4A535D">· 100%</span></td><td class="num">28.10 09:04</td></tr>
+</tbody>
+</table>
+<p style="margin: 0; padding: 12px 16px; font-size: 13px; color: #4A535D">Отметки о приёме вносит пациент. Изменение назначений выполняется в МИС клиники.</p>
+</section>
+</sc-if>
+
+<sc-if value="{{isChat}}" hint-placeholder-val="{{ false }}">
+<section aria-label="Переписка с пациентом" style="max-width: 820px; background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; display: flex; flex-direction: column">
+<ol style="list-style: none; margin: 0; padding: 8px 0; display: flex; flex-direction: column">
+<li style="padding: 8px 16px; font-size: 13px; color: #7A1A12; background: #FDECEA">Система · <span class="num">10:38</span> — критический алерт: глюкоза 2,9 ммоль/л. Родственник уведомлён SMS.</li>
+<sc-for list="{{msgs}}" as="m" hint-placeholder-count="3">
+<li style="padding: 10px 16px; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid #ECEEF1">
+<span style="font-size: 13px"><span style="font-weight: 600">{{m.who}}</span> <span class="num" style="color: #646E78">{{m.time}}</span></span>
+<span>{{m.text}}</span>
+</li>
+</sc-for>
+</ol>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-top: 1px solid #D9DDE2">
+<label style="flex: 1 1 300px; display: flex"><span class="vh">Сообщение пациенту</span><textarea rows="2" value="{{draft}}" onChange="{{onDraft}}" placeholder="Сообщение пациенту" style="flex-grow: 1; min-width: 0; resize: vertical; box-sizing: border-box; padding: 6px 10px; border: 1px solid #B9C0C8; border-radius: 4px; font: inherit; color: #1B1F24"></textarea></label>
+<button type="button" class="btn btn-primary" onClick="{{send}}" disabled="{{sendDisabled}}">Отправить</button>
+</div>
+<p style="margin: 0; padding: 0 16px 12px; font-size: 12px; line-height: 16px; color: #646E78">Сообщения сохраняются в медкарте. Хранение и обработка — на серверах в РФ.</p>
+</section>
+</sc-if>
+
+<sc-if value="{{isLog}}" hint-placeholder-val="{{ false }}">
+<section aria-label="Журнал алертов" style="background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; overflow-x: auto">
+<table style="width: 100%; min-width: 760px; border-collapse: collapse">
+<thead><tr><th scope="col">Время</th><th scope="col">Показатель</th><th scope="col">Уровень</th><th scope="col">Уведомлены</th><th scope="col">Реакция</th></tr></thead>
+<tbody>
+<tr><td class="num">28.10 10:38</td><td class="num">2,9 ммоль/л</td><td style="color: #B42318; font-weight: 600">Критично</td><td>врач, родственник (SMS)</td><td>{{logReaction}}</td></tr>
+<tr><td class="num">27.10 21:05</td><td class="num">3,4 ммоль/л</td><td style="color: #B42318; font-weight: 600">Критично</td><td>врач</td><td>принят через 6 мин, Смирнова Е. А.</td></tr>
+<tr><td class="num">19.10 14:22</td><td class="num">12,1 ммоль/л</td><td style="color: #8A4B00; font-weight: 600">Внимание</td><td>врач</td><td>просмотрен 19.10 15:01</td></tr>
+</tbody>
+</table>
+</section>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'vitals', period: 14, accepted: false, note: '', draft: '', sent: [] };
+  }
+  renderVals() {
+    var self = this, s = this.state;
+    var all = [6.5, 7.0, 6.1, 6.8, 7.4, 6.2, 5.9, 7.8, 6.6, 6.0, 7.2, 6.9, 6.3, 5.7, 6.0, 6.2, 7.1, 5.9, 6.8, 8.2, 6.4, 5.8, 6.9, 6.1, 5.4, 5.0, 4.6, 3.8, 3.4, 2.9];
+    var n = s.period, v = all.slice(all.length - n);
+    var Y = function (x) { return 232 - (x - 2) / 10 * 216; };
+    var X = function (i) { return 40 + i * (712 / (n - 1)); };
+    var dot = function (i) { var x = X(i), y = Y(v[i]); return 'M' + (x - 3).toFixed(1) + ' ' + y.toFixed(1) + 'a3 3 0 1 0 6 0a3 3 0 1 0 -6 0'; };
+    var outP = '', inP = '', out = 0;
+    v.forEach(function (x, i) { if (x < 3.9 || x > 10) { outP += dot(i); out++; } else if (n <= 14) { inP += dot(i); } });
+    var f = function (x) { return x.toFixed(1).replace('.', ','); };
+    var tabsDef = [['vitals', 'Показатели'], ['meds', 'Назначения'], ['chat', 'Переписка'], ['log', 'Журнал алертов']];
+    var tabs = tabsDef.map(function (t) {
+      var on = t[0] === s.tab;
+      return { label: t[1], selected: on ? 'true' : 'false', pick: function () { self.setState({ tab: t[0] }); },
+        style: on ? 'color: #1B1F24; font-weight: 600; border-bottom-color: #1D5FA8' : '' };
+    });
+    var periods = [7, 14, 30].map(function (d, i) {
+      var on = d === n;
+      return { label: d + ' дн.', pressed: on ? 'true' : 'false', pick: function () { self.setState({ period: d }); },
+        style: (i === 0 ? 'border-radius: 4px 0 0 4px; ' : i === 2 ? 'border-radius: 0 4px 4px 0; ' : '') + (on ? 'background: #1B1F24; border-color: #1B1F24; color: #FFFFFF; position: relative' : '') };
+    });
+    var acc = s.accepted;
+    var base = [
+      { who: 'Ковалёва Н. П.', time: '10:40', text: 'Голова кружится, руки дрожат. Глюкометр показал 2,9.' },
+      { who: 'Смирнова Е. А.', time: '10:42', text: 'Нина Петровна, примите 15–20 г быстрых углеводов: стакан сока или 4 таблетки глюкозы. Через 15 минут повторите замер.' },
+      { who: 'Ковалёва Н. П.', time: '10:44', text: 'Выпила сок. Жду.' }
+    ].concat(s.sent);
+    return {
+      tabs: tabs, periods: periods,
+      isVitals: s.tab === 'vitals', isMeds: s.tab === 'meds', isChat: s.tab === 'chat', isLog: s.tab === 'log',
+      pts: v.map(function (x, i) { return X(i).toFixed(1) + ',' + Y(x).toFixed(1); }).join(' '),
+      outPath: outP || 'M0 0', inPath: inP || 'M0 0', outCount: out + ' из ' + n,
+      avg: f(v.reduce(function (a, b) { return a + b; }, 0) / n), min: f(Math.min.apply(null, v)), max: f(Math.max.apply(null, v)),
+      firstDate: { 7: '22.10', 14: '15.10', 30: '29.09' }[n],
+      chartLabel: 'Глюкоза за ' + n + ' дней: снижение до 2,9 ммоль/л 28.10, ' + out + ' значений вне цели',
+      pending: !acc, accepted: acc, note: s.note,
+      alertTitle: acc ? 'Алерт принят в 10:42 · Смирнова Е. А.' : 'Критический алерт · глюкоза 2,9 ммоль/л · 10:38',
+      alertText: acc ? (s.note ? 'Комментарий: ' + s.note : 'Эскалация отменена.') : 'Ниже порога 3,9. Врач и родственник уведомлены. Без реакции в 10:53 алерт уйдёт дежурному врачу.',
+      alertBox: 'display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; padding: 10px 12px; border-radius: 4px; ' + (acc ? 'background: #F6F7F8; border: 1px solid #D9DDE2; color: #1B1F24' : 'background: #FDECEA; border: 1px solid #F3B8B1; color: #7A1A12'),
+      onNote: function (e) { self.setState({ note: e.target.value }); },
+      accept: function () { self.setState({ accepted: true }); },
+      undo: function () { self.setState({ accepted: false }); },
+      logReaction: acc ? 'принят в 10:42, Смирнова Е. А.' : 'ожидает · эскалация в 10:53',
+      msgs: base, draft: s.draft, sendDisabled: !(s.draft || '').trim(),
+      onDraft: function (e) { self.setState({ draft: e.target.value }); },
+      send: function () { var t = (self.state.draft || '').trim(); if (!t) return; self.setState({ draft: '', sent: self.state.sent.concat([{ who: 'Смирнова Е. А.', time: '10:46', text: t }]) }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

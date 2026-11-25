@@ -1,0 +1,81 @@
+/* HealthMonitor — дизайн-токены (версия v2)
+   Шрифты: IBM Plex Sans (интерфейс), IBM Plex Mono (все числа, время, значения показателей).
+   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+   Принцип: нейтральные поверхности преобладают; цвет — только для действий, статусов и медицинских предупреждений. */
+
+:root {
+  /* Поверхности */
+  --bg: #F6F7F8;            /* фон страницы (врач, админ, вход) */
+  --surface: #FFFFFF;       /* панели, шапка; фон мобильных экранов */
+  --surface-sub: #F0F2F4;   /* заголовок группы в списке, наведение на кнопку */
+  --selected: #EEF4FB;      /* выбранная строка таблицы */
+
+  /* Линии */
+  --border: #D9DDE2;        /* рамки панелей, разделители секций */
+  --border-row: #ECEEF1;    /* разделители строк */
+  --border-input: #B9C0C8;  /* рамки полей и вторичных кнопок */
+
+  /* Текст */
+  --text: #1B1F24;
+  --text-2: #4A535D;        /* вторичный */
+  --text-3: #646E78;        /* подписи; минимальный контраст на белом */
+  --text-disabled: #8A939D;
+
+  /* Действие и выбор */
+  --primary: #1D5FA8;
+  --primary-hover: #164C87;
+
+  /* Статусы */
+  --crit: #B42318;          /* критичное значение, кнопка «Принять алерт», маркер */
+  --crit-hover: #912018;
+  --crit-bg: #FDECEA;       /* полоса критического алерта */
+  --crit-border: #F3B8B1;
+  --crit-row: #FFFBFA;      /* фон строки с открытым критическим алертом */
+  --crit-text-on-bg: #7A1A12;
+  --warn-marker: #D98A00;   /* точка «внимание» */
+  --warn-text: #8A4B00;     /* значение «внимание» (контраст ≥ 4.5:1) */
+  --none-marker: #8A939D;   /* «нет данных» — пустой кружок */
+  /* Норма — обычный --text, без цвета. */
+
+  /* Типографика (размер / межстрочный · вес) */
+  --font: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  /* Врач и админ */
+  --t-page: 600 20px/28px var(--font);
+  --t-section: 600 16px/24px var(--font);
+  --t-body: 400 14px/20px var(--font);
+  --t-table: 400 13px/18px var(--font);
+  --t-caption: 500 12px/16px var(--font);
+  /* Пациент и родственник */
+  --tm-page: 600 22px/28px var(--font);
+  --tm-section: 600 17px/24px var(--font);
+  --tm-body: 400 17px/24px var(--font);
+  --tm-secondary: 400 15px/20px var(--font);
+  --tm-caption: 400 13px/18px var(--font);
+
+  /* Отступы, шаг 4 px */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-6: 24px; --s-8: 32px;
+  --page-x: 24px;           /* поля страницы на десктопе */
+  --page-x-mobile: 16px;
+
+  /* Скругления — только два */
+  --r-control: 4px;         /* кнопки, поля */
+  --r-panel: 6px;           /* панели */
+  /* Круглые элементы — только маркеры статуса и счётчики. */
+
+  /* Размеры контролов */
+  --control-h: 32px;        /* врач, админ на десктопе */
+  --control-h-touch: 44px;  /* те же контролы при ширине < 700 px */
+  --control-h-mobile: 48px; /* поля пациента */
+  --button-h-mobile: 52px;  /* основная кнопка пациента */
+  --header-h: 48px;
+  --row-h: 48px;            /* минимальная высота строки рабочего списка */
+
+  /* Фокус */
+  --focus-ring: 2px solid var(--primary);
+
+  /* Тени не используются. */
+}
+
+:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }

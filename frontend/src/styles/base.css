@@ -1,0 +1,72 @@
+/* Базовые стили приложения. Значения — только из tokens.css. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: var(--t-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--primary);
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+/* Текст только для экранных дикторов */
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Подсказка под полем и мелкие пояснения */
+.hint {
+  font: var(--t-caption);
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.text-2 {
+  color: var(--text-2);
+}
+
+/* Кнопка, которая выглядит как ссылка */
+.link-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  color: var(--primary-hover);
+}
+
+.link-button:disabled {
+  color: var(--text-disabled);
+  text-decoration: none;
+  cursor: default;
+}

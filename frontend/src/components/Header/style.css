@@ -1,0 +1,75 @@
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1) var(--s-6);
+  padding: 0 var(--page-x);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.header__brand {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.header__nav {
+  display: flex;
+  flex-grow: 1;
+  flex-wrap: wrap;
+  gap: 0 20px;
+}
+
+.header__link {
+  display: flex;
+  align-items: center;
+  height: var(--header-h);
+  padding: 0 var(--s-1);
+  border-bottom: 2px solid transparent;
+  color: var(--text-2);
+  text-decoration: none;
+}
+
+.header__link:hover {
+  color: var(--text);
+}
+
+.header__link.active {
+  border-bottom-color: var(--primary);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.header__counter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--crit);
+  color: var(--surface);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.header__user {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.header__logout {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.header__logout:hover {
+  color: var(--primary-hover);
+}

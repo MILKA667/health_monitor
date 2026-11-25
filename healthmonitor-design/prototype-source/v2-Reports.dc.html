@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Отчёты</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F6F7F8}
+a{color:#1D5FA8}a:hover{color:#164C87}
+:focus-visible{outline:2px solid #1D5FA8;outline-offset:2px}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;border-radius:4px;border:1px solid #B9C0C8;background:#FFFFFF;color:#1B1F24;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#F0F2F4;color:#1B1F24}
+.btn-primary{background:#1D5FA8;border-color:#1D5FA8;color:#FFFFFF}.btn-primary:hover{background:#164C87;border-color:#164C87;color:#FFFFFF}
+.btn:disabled{background:#F0F2F4;border-color:#D9DDE2;color:#8A939D;cursor:not-allowed}
+.nav{display:flex;align-items:center;height:48px;padding:0 4px;color:#4A535D;text-decoration:none;border-bottom:2px solid transparent;box-sizing:border-box}
+.nav:hover{color:#1B1F24}
+.cnt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;margin-left:6px;border-radius:9px;background:#B42318;color:#FFFFFF;font-size:11px;font-weight:600}
+.field{height:32px;box-sizing:border-box;padding:0 10px;border:1px solid #B9C0C8;border-radius:4px;background:#FFFFFF;font:inherit;font-size:14px;color:#1B1F24;width:100%}
+.lbl{font-size:13px;font-weight:500}
+.opt{display:flex;align-items:flex-start;gap:8px;padding:6px 0;cursor:pointer}
+.opt input{width:16px;height:16px;margin:2px 0 0;accent-color:#1D5FA8;flex-shrink:0}
+th{text-align:left;font-weight:500;font-size:12px;line-height:16px;color:#646E78;padding:8px 16px;border-bottom:1px solid #D9DDE2}
+td{padding:9px 16px;border-bottom:1px solid #ECEEF1}
+@media (max-width:700px){.btn,.field{height:44px}.opt{min-height:44px;align-items:center}}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F6F7F8; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #1B1F24; font-size: 14px; line-height: 20px; display: flex; flex-direction: column">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px; padding: 0 24px; background: #FFFFFF; border-bottom: 1px solid #D9DDE2">
+<span style="font-weight: 600; font-size: 15px">HealthMonitor</span>
+<nav aria-label="Разделы" style="display: flex; flex-wrap: wrap; gap: 0 20px; flex-grow: 1">
+<a class="nav" href="v2-Worklist.dc.html">Пациенты</a>
+<a class="nav" href="v2-Alerts.dc.html">Алерты<span class="cnt">2</span></a>
+<a class="nav" href="v2-Messages.dc.html">Сообщения</a>
+<a class="nav" href="v2-Reports.dc.html" aria-current="page" style="color: #1B1F24; font-weight: 600; border-bottom-color: #1D5FA8">Отчёты</a>
+<a class="nav" href="v2-Thresholds.dc.html">Пороги</a>
+</nav>
+<span style="font-size: 13px; color: #4A535D">Смирнова Е. А. · эндокринолог · <a href="v2-Login.dc.html">Выйти</a></span>
+</header>
+
+<div style="padding: 16px 24px 12px"><h1 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600">Отчёты</h1></div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px; padding: 0 24px 32px; align-items: flex-start">
+<section aria-label="Новый отчёт" style="flex: 1 1 360px; max-width: 440px; background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+<h2 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">Новый отчёт</h2>
+<fieldset style="border: none; margin: 0; padding: 0">
+<legend class="lbl" style="padding: 0; margin-bottom: 4px">Тип</legend>
+<sc-for list="{{types}}" as="t" hint-placeholder-count="3"><label class="opt"><input type="radio" name="rtype" checked="{{t.on}}" onChange="{{t.pick}}"><span style="display: flex; flex-direction: column"><span>{{t.label}}</span><span style="font-size: 12px; line-height: 16px; color: #646E78">{{t.sub}}</span></span></label></sc-for>
+</fieldset>
+<label style="display: flex; flex-direction: column; gap: 4px"><span class="lbl">Период</span><select class="field" value="{{period}}" onChange="{{onPeriod}}"><option value="14">15.10–28.10.2026 (14 дней)</option><option value="30">29.09–28.10.2026 (30 дней)</option><option value="90">31.07–28.10.2026 (3 месяца)</option></select></label>
+<sc-if value="{{byPatient}}" hint-placeholder-val="{{ true }}"><label style="display: flex; flex-direction: column; gap: 4px"><span class="lbl">Пациент</span><select class="field" value="{{patient}}" onChange="{{onPatient}}"><option value="Ковалёва Н. П.">Ковалёва Н. П.</option><option value="Савельев И. А.">Савельев И. А.</option><option value="Мухина Д. О.">Мухина Д. О.</option><option value="Петров А. В.">Петров А. В.</option></select></label></sc-if>
+<sc-if value="{{byGroup}}" hint-placeholder-val="{{ false }}"><label style="display: flex; flex-direction: column; gap: 4px"><span class="lbl">Нозология</span><select class="field" value="{{dx}}" onChange="{{onDx}}"><option value="все нозологии">Все нозологии</option><option value="сахарный диабет">Сахарный диабет</option><option value="гипертония">Гипертония</option><option value="астма">Астма</option></select></label></sc-if>
+<fieldset style="border: none; margin: 0; padding: 0">
+<legend class="lbl" style="padding: 0; margin-bottom: 4px">Разделы</legend>
+<sc-for list="{{sections}}" as="x" hint-placeholder-count="4"><label class="opt"><input type="checkbox" checked="{{x.on}}" onChange="{{x.toggle}}">{{x.label}}</label></sc-for>
+</fieldset>
+<div style="display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid #ECEEF1">
+<button type="button" class="btn btn-primary" onClick="{{make}}" disabled="{{noSections}}" style="align-self: flex-start">Сформировать PDF</button>
+<span style="font-size: 12px; line-height: 16px; color: #646E78">{{summary}}. Выгрузка фиксируется в журнале аудита.</span>
+</div>
+</section>
+
+<section aria-label="Сформированные отчёты" style="flex: 999 1 560px; min-width: 0; background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; overflow-x: auto">
+<h2 style="margin: 0; padding: 16px 16px 8px; font-size: 16px; line-height: 24px; font-weight: 600">Сформированные</h2>
+<table style="width: 100%; min-width: 620px; border-collapse: collapse">
+<thead><tr><th scope="col">Отчёт</th><th scope="col">Период</th><th scope="col">Разделы</th><th scope="col">Создан</th><th scope="col"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Файл</span></th></tr></thead>
+<tbody>
+<sc-for list="{{ready}}" as="r" hint-placeholder-count="3">
+<tr><td style="font-weight: 500">{{r.name}}</td><td class="num" style="color: #4A535D">{{r.period}}</td><td style="color: #4A535D">{{r.sections}}</td><td class="num" style="color: #4A535D">{{r.at}}</td><td style="text-align: right"><span style="font-size: 12px; color: #646E78">PDF</span></td></tr>
+</sc-for>
+</tbody>
+</table>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { type: 'patient', period: '14', patient: 'Ковалёва Н. П.', dx: 'все нозологии', sec: { dyn: true, alerts: true, meds: true, msgs: false }, made: [] };
+  }
+  renderVals() {
+    var self = this, s = this.state;
+    var TY = { patient: ['По пациенту', 'динамика показателей, алерты, приверженность'], group: ['По группе пациентов', 'сводка по нозологии: регулярность ввода, доля вне цели'], resp: ['Реакция на алерты', 'время реакции врачей отделения, эскалации'] };
+    var types = Object.keys(TY).map(function (k) { return { label: TY[k][0], sub: TY[k][1], on: k === s.type, pick: function () { self.setState({ type: k }); } }; });
+    var SEC = [['dyn', 'Динамика показателей'], ['alerts', 'Алерты и время реакции'], ['meds', 'Приверженность назначениям'], ['msgs', 'Переписка с пациентом']];
+    var sections = SEC.map(function (x) { var on = !!s.sec[x[0]]; return { label: x[1], on: on, toggle: function () { var m = Object.assign({}, self.state.sec); m[x[0]] = !on; self.setState({ sec: m }); } }; });
+    var chosen = SEC.filter(function (x) { return s.sec[x[0]]; }).map(function (x) { return x[1].toLowerCase(); });
+    var PT = { '14': '15.10–28.10.2026', '30': '29.09–28.10.2026', '90': '31.07–28.10.2026' };
+    var subject = s.type === 'patient' ? s.patient : s.type === 'group' ? s.dx : 'отделение';
+    var name = TY[s.type][0] + ' · ' + subject;
+    var ready = s.made.concat([
+      { name: 'По пациенту · Петров А. В.', period: '13.10–26.10.2026', sections: 'динамика, алерты', at: '27.10 16:02' },
+      { name: 'Реакция на алерты · отделение', period: '01.10–21.10.2026', sections: 'алерты и время реакции', at: '22.10 09:30' },
+      { name: 'По группе пациентов · сахарный диабет', period: '01.09–30.09.2026', sections: 'динамика, приверженность', at: '01.10 11:15' }
+    ]);
+    return {
+      types: types, sections: sections, ready: ready, noSections: chosen.length === 0,
+      byPatient: s.type === 'patient', byGroup: s.type === 'group',
+      period: s.period, patient: s.patient, dx: s.dx,
+      summary: chosen.length ? name + ', ' + PT[s.period] + ': ' + chosen.join(', ') : 'Выберите хотя бы один раздел',
+      onPeriod: function (e) { self.setState({ period: e.target.value }); },
+      onPatient: function (e) { self.setState({ patient: e.target.value }); },
+      onDx: function (e) { self.setState({ dx: e.target.value }); },
+      make: function () { self.setState({ made: [{ name: name, period: PT[self.state.period], sections: chosen.join(', '), at: '28.10 10:45' }].concat(self.state.made) }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+.panel {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-panel);
+  background: var(--surface);
+}

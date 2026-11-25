@@ -1,0 +1,24 @@
+.password-rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.password-rules li {
+  display: flex;
+  gap: var(--s-2);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--text-3);
+}
+
+.password-rules li.password-rules__ok {
+  color: var(--text);
+}
+
+.password-rules__mark {
+  width: 12px;
+}

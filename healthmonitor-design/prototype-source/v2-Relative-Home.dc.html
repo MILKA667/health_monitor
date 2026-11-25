@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Родственник — главная</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#1D5FA8}
+:focus-visible{outline:2px solid #1D5FA8;outline-offset:2px}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.b{display:flex;align-items:center;justify-content:center;height:52px;border-radius:4px;font-size:17px;font-weight:600;text-decoration:none;box-sizing:border-box}
+.b-danger{background:#B42318;color:#FFFFFF}.b-danger:hover{background:#912018;color:#FFFFFF}
+.b-sec{border:1px solid #B9C0C8;color:#1B1F24;background:#FFFFFF}.b-sec:hover{background:#F0F2F4;color:#1B1F24}
+.ev{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;padding:8px 0;border-bottom:1px solid #ECEEF1;font-size:15px;line-height:20px}
+.it{display:flex;align-items:center;gap:12px;min-height:56px;cursor:pointer}
+.it input{width:22px;height:22px;margin:0;accent-color:#1D5FA8;flex-shrink:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #1B1F24; font-size: 17px; line-height: 24px; overflow: hidden">
+
+<div style="flex-grow: 1; overflow-y: auto; padding: 52px 16px 16px; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; justify-content: space-between; align-items: center; font-size: 15px; line-height: 20px; color: #4A535D"><span style="font-weight: 600; color: #1B1F24">HealthMonitor</span><span>Ковалёв Д. С. · <a href="v2-Login.dc.html">Выйти</a></span></div>
+
+<div style="display: flex; flex-direction: column"><h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">Ковалёва Нина Петровна</h1><span style="font-size: 15px; line-height: 20px; color: #4A535D">мама · сахарный диабет 2 типа</span></div>
+
+<section aria-labelledby="r-a" style="display: flex; flex-direction: column; gap: 4px; padding-bottom: 16px; border-bottom: 1px solid #D9DDE2">
+<h2 id="r-a" style="margin: 0; font-size: 17px; line-height: 24px; font-weight: 600; color: #B42318">Сахар ниже допустимого</h2>
+<p style="margin: 0; display: flex; align-items: baseline; gap: 8px"><span class="num" style="font-size: 32px; line-height: 40px; font-weight: 500; color: #B42318">2,9</span><span style="color: #4A535D">ммоль/л · сегодня в <span class="num">10:38</span></span></p>
+<div style="margin-top: 8px">
+<div class="ev"><span class="num" style="color: #4A535D">10:38</span><span>Врач получил уведомление</span></div>
+<div class="ev"><span class="num" style="color: #4A535D">10:42</span><span>Врач Смирнова Е. А. связалась с мамой</span></div>
+<div class="ev" style="border-bottom: none"><span class="num" style="color: #4A535D">~10:57</span><span style="color: #4A535D">Ожидается повторный замер</span></div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px">
+<a class="b b-sec" href="tel:+70000000000">Позвонить маме</a>
+<a class="b b-danger" href="tel:103">Скорая — 103</a>
+</div>
+</section>
+
+<section aria-labelledby="r-m">
+<h2 id="r-m" style="margin: 0 0 4px; font-size: 17px; line-height: 24px; font-weight: 600">Последние измерения</h2>
+<table style="width: 100%; border-collapse: collapse; font-size: 15px; line-height: 20px">
+<caption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Глюкоза, ммоль/л</caption>
+<tbody>
+<tr><td class="num" style="padding: 10px 0; border-bottom: 1px solid #ECEEF1; color: #4A535D">28.10 · 10:38</td><td class="num" style="padding: 10px 0; border-bottom: 1px solid #ECEEF1; text-align: right; font-weight: 500; color: #B42318">2,9</td><td style="padding: 10px 0 10px 12px; border-bottom: 1px solid #ECEEF1; color: #4A535D">ниже порога</td></tr>
+<tr><td class="num" style="padding: 10px 0; border-bottom: 1px solid #ECEEF1; color: #4A535D">27.10 · 21:05</td><td class="num" style="padding: 10px 0; border-bottom: 1px solid #ECEEF1; text-align: right; font-weight: 500; color: #B42318">3,4</td><td style="padding: 10px 0 10px 12px; border-bottom: 1px solid #ECEEF1; color: #4A535D">ниже порога</td></tr>
+<tr><td class="num" style="padding: 10px 0; border-bottom: 1px solid #ECEEF1; color: #4A535D">26.10 · 08:30</td><td class="num" style="padding: 10px 0; border-bottom: 1px solid #ECEEF1; text-align: right; font-weight: 500">4,6</td><td style="padding: 10px 0 10px 12px; border-bottom: 1px solid #ECEEF1; color: #4A535D">в пределах цели</td></tr>
+</tbody>
+</table>
+</section>
+
+<section aria-labelledby="r-n">
+<h2 id="r-n" style="margin: 0; font-size: 17px; line-height: 24px; font-weight: 600">Уведомления</h2>
+<label class="it"><span style="flex-grow: 1; display: flex; flex-direction: column; line-height: 20px"><span>Push при критичном значении</span><span style="font-size: 15px; color: #4A535D">SMS приходят всегда</span></span><input type="checkbox" checked="{{push}}" onChange="{{onPush}}"></label>
+</section>
+
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #646E78">Доступ открыт по согласию мамы от 02.10.2026. Вы видите показатели и алерты, переписка с врачом вам недоступна.</p>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { push: true }; }
+  renderVals() {
+    var self = this;
+    return { push: this.state.push, onPush: function () { self.setState({ push: !self.state.push }); } };
+  }
+}
+</script>
+</body>
+</html>

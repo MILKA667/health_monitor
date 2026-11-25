@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Пациент — устройства</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#1D5FA8}
+:focus-visible{outline:2px solid #1D5FA8;outline-offset:2px}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.back{display:flex;align-items:center;gap:4px;height:44px;color:#1D5FA8;text-decoration:none;font-size:17px}
+.pbtn{display:flex;align-items:center;justify-content:center;width:100%;height:48px;border:none;border-radius:4px;background:#1D5FA8;color:#FFFFFF;font:inherit;font-size:17px;font-weight:600;cursor:pointer}
+.pbtn:hover{background:#164C87}
+.sbtn{display:flex;align-items:center;justify-content:center;width:100%;height:48px;border:1px solid #B9C0C8;border-radius:4px;background:#FFFFFF;color:#1B1F24;font:inherit;font-size:17px;font-weight:500;cursor:pointer}
+.sbtn:hover{background:#F0F2F4}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #ECEEF1;font-size:15px;line-height:20px}
+.kv > span:first-child{color:#4A535D}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #FFFFFF; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #1B1F24; font-size: 17px; line-height: 24px; overflow: hidden">
+
+<div style="padding: 44px 16px 0"><a class="back" href="v2-Patient-Profile.dc.html"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5L7 10l5.5 5.5"></path></svg>Профиль</a></div>
+
+<div style="flex-grow: 1; overflow-y: auto; padding: 4px 16px 24px; display: flex; flex-direction: column; gap: 28px">
+<h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 600">Устройства</h1>
+
+<section aria-labelledby="d-g" style="display: flex; flex-direction: column; gap: 12px">
+<h2 id="d-g" style="margin: 0; font-size: 17px; line-height: 24px; font-weight: 600">Глюкометр</h2>
+<div>
+<div class="kv"><span>Модель</span><span>[модель глюкометра]</span></div>
+<div class="kv"><span>Состояние</span><span style="{{gStyle}}">{{gState}}</span></div>
+<div class="kv"><span>Синхронизация</span><span class="num">{{gSync}}</span></div>
+</div>
+<sc-if value="{{gOn}}" hint-placeholder-val="{{ true }}"><div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px"><button type="button" class="pbtn" onClick="{{sync}}">Синхронизировать</button><button type="button" class="sbtn" onClick="{{gToggle}}">Отключить</button></div></sc-if>
+<sc-if value="{{gOff}}" hint-placeholder-val="{{ false }}"><button type="button" class="pbtn" onClick="{{gToggle}}">Подключить снова</button></sc-if>
+</section>
+
+<section aria-labelledby="d-t" style="display: flex; flex-direction: column; gap: 12px">
+<h2 id="d-t" style="margin: 0; font-size: 17px; line-height: 24px; font-weight: 600">Тонометр</h2>
+<sc-if value="{{t0}}" hint-placeholder-val="{{ true }}">
+<p style="margin: 0; font-size: 15px; line-height: 20px; color: #4A535D">Не подключён. Подключите, если врач назначил контроль давления. Без устройства показатели можно вносить вручную.</p>
+<button type="button" class="sbtn" onClick="{{tNext}}">Подключить тонометр</button>
+</sc-if>
+<sc-if value="{{t1}}" hint-placeholder-val="{{ false }}">
+<ol style="margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px">
+<li>Включите Bluetooth на телефоне.</li>
+<li>Зажмите кнопку Bluetooth на тонометре на 3 секунды.</li>
+<li>Положите тонометр рядом с телефоном.</li>
+</ol>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px"><button type="button" class="sbtn" onClick="{{tReset}}">Отмена</button><button type="button" class="pbtn" onClick="{{tNext}}">Найти</button></div>
+</sc-if>
+<sc-if value="{{t2}}" hint-placeholder-val="{{ false }}">
+<div><div class="kv"><span>Модель</span><span>[модель тонометра]</span></div><div class="kv"><span>Состояние</span><span>подключён</span></div></div>
+<p style="margin: 0; font-size: 15px; line-height: 20px; color: #4A535D">Следующее измерение придёт врачу автоматически.</p>
+<button type="button" class="sbtn" onClick="{{tReset}}">Отключить</button>
+</sc-if>
+</section>
+
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #646E78">Поддерживаются модели, согласованные с клиникой. Данные передаются в зашифрованном виде и хранятся на серверах в РФ.</p>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { g: true, synced: false, t: 0 }; }
+  renderVals() {
+    var self = this, s = this.state;
+    return {
+      gOn: s.g, gOff: !s.g,
+      gState: s.g ? 'подключён' : 'отключён', gStyle: s.g ? '' : 'color: #B42318; font-weight: 500',
+      gSync: s.g ? (s.synced ? 'только что · новых нет' : 'сегодня 10:38') : '—',
+      sync: function () { self.setState({ synced: true }); },
+      gToggle: function () { self.setState({ g: !self.state.g, synced: false }); },
+      t0: s.t === 0, t1: s.t === 1, t2: s.t === 2,
+      tNext: function () { self.setState({ t: self.state.t + 1 }); },
+      tReset: function () { self.setState({ t: 0 }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

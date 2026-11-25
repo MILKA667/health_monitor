@@ -1,0 +1,29 @@
+.patient-tabbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-bottom: 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.patient-tabbar__tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--button-h-mobile);
+  margin-top: -1px;
+  border-top: 2px solid transparent;
+  color: var(--text-2);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.patient-tabbar__tab:hover {
+  color: var(--text);
+}
+
+.patient-tabbar__tab.active {
+  border-top-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}

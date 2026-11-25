@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Сообщения</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#F6F7F8}
+a{color:#1D5FA8}a:hover{color:#164C87}
+:focus-visible{outline:2px solid #1D5FA8;outline-offset:2px}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;border-radius:4px;border:1px solid #B9C0C8;background:#FFFFFF;color:#1B1F24;font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:#F0F2F4;color:#1B1F24}
+.btn-primary{background:#1D5FA8;border-color:#1D5FA8;color:#FFFFFF}.btn-primary:hover{background:#164C87;border-color:#164C87;color:#FFFFFF}
+.btn:disabled{background:#F0F2F4;border-color:#D9DDE2;color:#8A939D;cursor:not-allowed}
+.nav{display:flex;align-items:center;height:48px;padding:0 4px;color:#4A535D;text-decoration:none;border-bottom:2px solid transparent;box-sizing:border-box}
+.nav:hover{color:#1B1F24}
+.cnt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;margin-left:6px;border-radius:9px;background:#B42318;color:#FFFFFF;font-size:11px;font-weight:600}
+.field{height:32px;box-sizing:border-box;padding:0 10px;border:1px solid #B9C0C8;border-radius:4px;background:#FFFFFF;font:inherit;font-size:14px;color:#1B1F24}
+.conv{display:flex;flex-direction:column;gap:2px;width:100%;padding:10px 16px 10px 13px;border:none;border-left:3px solid transparent;border-bottom:1px solid #ECEEF1;background:#FFFFFF;font:inherit;color:#1B1F24;text-align:left;cursor:pointer}
+.conv:hover{background:#F6F7F8}
+@media (max-width:700px){.btn,.field{height:44px}}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F6F7F8; font-family: 'IBM Plex Sans', system-ui, sans-serif; color: #1B1F24; font-size: 14px; line-height: 20px; display: flex; flex-direction: column">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px; padding: 0 24px; background: #FFFFFF; border-bottom: 1px solid #D9DDE2">
+<span style="font-weight: 600; font-size: 15px">HealthMonitor</span>
+<nav aria-label="Разделы" style="display: flex; flex-wrap: wrap; gap: 0 20px; flex-grow: 1">
+<a class="nav" href="v2-Worklist.dc.html">Пациенты</a>
+<a class="nav" href="v2-Alerts.dc.html">Алерты<span class="cnt">2</span></a>
+<a class="nav" href="v2-Messages.dc.html" aria-current="page" style="color: #1B1F24; font-weight: 600; border-bottom-color: #1D5FA8">Сообщения</a>
+<a class="nav" href="v2-Reports.dc.html">Отчёты</a>
+<a class="nav" href="v2-Thresholds.dc.html">Пороги</a>
+</nav>
+<span style="font-size: 13px; color: #4A535D">Смирнова Е. А. · эндокринолог · <a href="v2-Login.dc.html">Выйти</a></span>
+</header>
+
+<div style="flex-grow: 1; display: flex; flex-wrap: wrap; gap: 16px; padding: 16px 24px 24px; align-items: stretch">
+
+<section aria-label="Диалоги" style="flex: 1 1 300px; max-width: 360px; background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column">
+<div style="padding: 12px 16px; border-bottom: 1px solid #D9DDE2; display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 600">Сообщения</h1>
+<label><span class="vh">Поиск по ФИО</span><input class="field" type="search" placeholder="Поиск по ФИО" value="{{q}}" onChange="{{onQ}}" style="width: 100%"></label>
+</div>
+<sc-for list="{{convs}}" as="c" hint-placeholder-count="4">
+<button type="button" class="conv" onClick="{{c.pick}}" aria-pressed="{{c.sel}}" style="{{c.style}}">
+<span style="display: flex; justify-content: space-between; gap: 8px"><span style="{{c.nameStyle}}">{{c.short}}</span><span class="num" style="font-size: 12px; color: #646E78">{{c.time}}</span></span>
+<span style="display: flex; justify-content: space-between; gap: 8px"><span style="font-size: 13px; color: #4A535D; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.last}}</span><sc-if value="{{c.hasUnread}}" hint-placeholder-val="{{ false }}"><span class="num" style="font-size: 12px; font-weight: 600; color: #1D5FA8; flex-shrink: 0">{{c.unread}} нов.</span></sc-if></span>
+</button>
+</sc-for>
+</section>
+
+<section aria-label="Переписка" style="flex: 999 1 520px; min-width: 0; background: #FFFFFF; border: 1px solid #D9DDE2; border-radius: 6px; display: flex; flex-direction: column">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 16px; border-bottom: 1px solid #D9DDE2">
+<div style="display: flex; flex-direction: column"><h2 style="margin: 0; font-size: 16px; line-height: 24px; font-weight: 600">{{cur.name}}</h2><span style="color: #4A535D">{{cur.dx}} · последний показатель <span class="num" style="{{cur.valStyle}}">{{cur.value}}</span> {{cur.unit}}, {{cur.when}}</span></div>
+<a class="btn" href="v2-Record.dc.html">Открыть медкарту</a>
+</div>
+<ol style="list-style: none; margin: 0; padding: 0; flex-grow: 1; display: flex; flex-direction: column">
+<sc-if value="{{cur.hasSys}}" hint-placeholder-val="{{ true }}"><li style="padding: 8px 16px; font-size: 13px; color: #7A1A12; background: #FDECEA">Система · {{cur.sys}}</li></sc-if>
+<sc-for list="{{msgs}}" as="m" hint-placeholder-count="3">
+<li style="padding: 10px 16px; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid #ECEEF1">
+<span style="font-size: 13px"><span style="font-weight: 600">{{m.who}}</span> <span class="num" style="color: #646E78">{{m.time}}</span></span>
+<span>{{m.text}}</span>
+</li>
+</sc-for>
+</ol>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-top: 1px solid #D9DDE2">
+<label style="flex: 1 1 300px; display: flex"><span class="vh">Сообщение пациенту</span><textarea rows="2" value="{{draft}}" onChange="{{onDraft}}" placeholder="Сообщение пациенту" style="flex-grow: 1; min-width: 0; resize: vertical; box-sizing: border-box; padding: 6px 10px; border: 1px solid #B9C0C8; border-radius: 4px; font: inherit; color: #1B1F24"></textarea></label>
+<button type="button" class="btn btn-primary" onClick="{{send}}" disabled="{{sendOff}}">Отправить</button>
+</div>
+<p style="margin: 0; padding: 0 16px 12px; font-size: 12px; line-height: 16px; color: #646E78">Сообщения сохраняются в медкарте. Хранение и обработка — на серверах в РФ.</p>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: 'kov', q: '', draft: '', sent: {}, read: { kov: true } }; }
+  renderVals() {
+    var self = this, s = this.state;
+    var C = {
+      kov: { name: 'Ковалёва Нина Петровна', short: 'Ковалёва Н. П.', who: 'Ковалёва Н. П.', dx: 'Сахарный диабет 2 типа', time: '10:44', unread: 1, value: '2,9', unit: 'ммоль/л', when: 'сегодня 10:38', lv: 'crit', sys: '10:38 — критический алерт: глюкоза 2,9 ммоль/л. Родственник уведомлён SMS.',
+        msgs: [['p', 'Голова кружится, руки дрожат. Глюкометр показал 2,9.', '10:40'], ['d', 'Нина Петровна, примите 15–20 г быстрых углеводов: стакан сока или 4 таблетки глюкозы. Через 15 минут повторите замер.', '10:42'], ['p', 'Выпила сок. Жду.', '10:44']] },
+      muh: { name: 'Мухина Дарья Олеговна', short: 'Мухина Д. О.', who: 'Мухина Д. О.', dx: 'Бронхиальная астма', time: '09:51', unread: 2, value: '290', unit: 'л/мин', when: 'сегодня 09:41', lv: 'warn', sys: '',
+        msgs: [['p', 'Последние три дня по утрам тяжелее дышать.', '09:49'], ['p', 'Пикфлоуметр показывает всё меньше, сегодня 290.', '09:51']] },
+      sav: { name: 'Савельев Игорь Андреевич', short: 'Савельев И. А.', who: 'Савельев И. А.', dx: 'Артериальная гипертония', time: 'вчера', unread: 0, value: '182/108', unit: 'мм рт. ст.', when: 'сегодня 10:20', lv: 'crit', sys: '10:20 — критический алерт: АД 182/108. Эскалирован дежурному в 10:35.',
+        msgs: [['p', 'Тонометр второй вечер показывает высокое давление.', '27.10 20:41'], ['d', 'Игорь Андреевич, измерьте повторно через 10 минут в покое и пришлите результат.', '27.10 20:55']] },
+      pet: { name: 'Петров Алексей Викторович', short: 'Петров А. В.', who: 'Петров А. В.', dx: 'Артериальная гипертония', time: '26.10', unread: 0, value: '152/94', unit: 'мм рт. ст.', when: 'сегодня 07:55', lv: 'warn', sys: '',
+        msgs: [['d', 'Алексей Викторович, продолжайте измерять утром и вечером.', '26.10 12:10'], ['p', 'Спасибо, понял.', '26.10 12:30']] }
+    };
+    var q = (s.q || '').toLowerCase();
+    var convs = Object.keys(C).filter(function (k) { return !q || C[k].name.toLowerCase().indexOf(q) >= 0; }).map(function (k) {
+      var c = C[k], on = k === s.sel, extra = s.sent[k] || [];
+      var un = s.read[k] ? 0 : c.unread;
+      return { short: c.short, time: extra.length ? '10:46' : c.time,
+        last: extra.length ? 'Вы: ' + extra[extra.length - 1][1] : (c.msgs[c.msgs.length - 1][0] === 'd' ? 'Вы: ' : '') + c.msgs[c.msgs.length - 1][1],
+        unread: un, hasUnread: un > 0, sel: on ? 'true' : 'false',
+        style: on ? 'border-left-color: #1D5FA8; background: #EEF4FB' : '',
+        nameStyle: 'font-weight: ' + (un ? 600 : 500),
+        pick: function () { var r = Object.assign({}, self.state.read); r[k] = true; self.setState({ sel: k, read: r, draft: '' }); } };
+    });
+    var c = C[s.sel];
+    var msgs = c.msgs.concat(s.sent[s.sel] || []).map(function (m) { return { who: m[0] === 'd' ? 'Смирнова Е. А.' : c.who, text: m[1], time: m[2] }; });
+    return {
+      convs: convs, msgs: msgs, q: s.q, draft: s.draft, sendOff: !(s.draft || '').trim(),
+      cur: Object.assign({}, c, { hasSys: !!c.sys, valStyle: 'font-weight: 500; color: ' + (c.lv === 'crit' ? '#B42318' : '#8A4B00') }),
+      onQ: function (e) { self.setState({ q: e.target.value }); },
+      onDraft: function (e) { self.setState({ draft: e.target.value }); },
+      send: function () {
+        var t = (self.state.draft || '').trim(); if (!t) return;
+        var m = Object.assign({}, self.state.sent); m[self.state.sel] = (m[self.state.sel] || []).concat([['d', t, '10:46']]);
+        self.setState({ sent: m, draft: '' });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
