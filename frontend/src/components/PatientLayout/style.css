@@ -1,0 +1,103 @@
+.patient-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 430px;
+  height: 100vh;
+  margin: 0 auto;
+  border-right: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: var(--tm-body);
+}
+
+.patient-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.patient-topbar__brand {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.patient-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.patient-layout__error {
+  padding: var(--s-4);
+}
+
+/* Общие элементы мобильных страниц */
+.patient-page {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--s-6);
+  padding: 0 var(--s-4) var(--s-4);
+}
+
+.patient-page h1 {
+  font: var(--tm-page);
+}
+
+.patient-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.patient-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.patient-section h2 {
+  font: var(--tm-section);
+}
+
+.patient-section__link {
+  font-size: var(--tm-secondary);
+}
+
+.patient-hint {
+  color: var(--text-3);
+  font-size: var(--tm-caption);
+  line-height: 18px;
+}
+
+/* Закреплённая основная кнопка над нижней навигацией */
+.patient-footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  padding: var(--s-3) var(--s-4);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.patient-footer .btn {
+  width: 100%;
+}
+
+@media (max-width: 430px) {
+  .patient-layout {
+    border-right: none;
+    border-left: none;
+  }
+}

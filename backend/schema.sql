@@ -185,3 +185,62 @@ CREATE INDEX IF NOT EXISTS alerts_patient_time ON alerts (patient_id, created_at
 
 -- Дежурный врач получает критичные алерты, на которые не отреагировали вовремя
 ALTER TABLE doctors ADD COLUMN IF NOT EXISTS on_duty BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Назначения врача: препарат и схема. Схему меняет врач, пациент только включает напоминания.
+CREATE TABLE IF NOT EXISTS medications (
+    id             SERIAL PRIMARY KEY,
+    patient_id     INTEGER NOT NULL REFERENCES patients (user_id),
+    name           TEXT NOT NULL,
+    schedule       TEXT NOT NULL,
+    prescribed_at  DATE NOT NULL DEFAULT CURRENT_DATE,
+    enabled        BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+-- Приёмы внутри схемы: время и что именно принять («1 таблетка после завтрака»)
+CREATE TABLE IF NOT EXISTS medication_slots (
+    id             SERIAL PRIMARY KEY,
+    medication_id  INTEGER NOT NULL REFERENCES medications (id) ON DELETE CASCADE,
+    time_of_day    TIME NOT NULL,
+    dose           TEXT NOT NULL DEFAULT ''
+);
+
+-- Отметки о приёме. Удалять и менять их нельзя: приверженность — часть медкарты.
+CREATE TABLE IF NOT EXISTS medication_intakes (
+    slot_id   INTEGER NOT NULL REFERENCES medication_slots (id) ON DELETE CASCADE,
+    taken_on  DATE NOT NULL,
+    taken_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (slot_id, taken_on)
+);
+
+-- Переписка пациента с врачом. Родственник переписку не видит.
+CREATE TABLE IF NOT EXISTS messages (
+    id          SERIAL PRIMARY KEY,
+    patient_id  INTEGER NOT NULL REFERENCES patients (user_id),
+    sender_id   INTEGER NOT NULL REFERENCES users (id),
+    body        TEXT NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    read_at     TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS messages_patient_time ON messages (patient_id, created_at);
+
+-- Сформированные отчёты врача: параметры сохраняются, печатная версия собирается по запросу
+CREATE TABLE IF NOT EXISTS reports (
+    id          SERIAL PRIMARY KEY,
+    doctor_id   INTEGER NOT NULL REFERENCES users (id),
+    kind        TEXT NOT NULL CHECK (kind IN ('patient', 'group', 'response')),
+    patient_id  INTEGER REFERENCES patients (user_id),
+    nosology    TEXT CHECK (nosology IN ('all', 'diabetes', 'hypertension', 'asthma')),
+    days        INTEGER NOT NULL,
+    sections    TEXT[] NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS reports_doctor_time ON reports (doctor_id, created_at DESC);
+
+-- Напоминания о замерах, которые настраивает пациент
+CREATE TABLE IF NOT EXISTS measurement_reminders (
+    id          SERIAL PRIMARY KEY,
+    patient_id  INTEGER NOT NULL REFERENCES patients (user_id),
+    kind        TEXT NOT NULL CHECK (kind IN ('glucose', 'bp', 'pef')),
+    time_of_day TIME NOT NULL,
+    enabled     BOOLEAN NOT NULL DEFAULT TRUE
+);

@@ -1,0 +1,216 @@
+.report {
+  padding: var(--s-4) var(--page-x) var(--s-8);
+}
+
+.report__loading {
+  padding: var(--s-6) 0;
+}
+
+.report__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+  max-width: 900px;
+  margin: 0 auto var(--s-3);
+}
+
+.report__back {
+  font-size: 14px;
+}
+
+.report__sheet {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--s-8);
+  border: 1px solid var(--border);
+  border-radius: var(--r-panel);
+  background: var(--surface);
+}
+
+.report__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3) var(--s-6);
+  padding-bottom: var(--s-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.report__clinic {
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.report__head h1 {
+  margin-top: 2px;
+  font: var(--t-page);
+}
+
+.report__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-6);
+  margin: 0;
+  font-size: 13px;
+}
+
+.report__meta div,
+.report__facts div {
+  display: flex;
+  gap: 6px;
+}
+
+.report__meta dt,
+.report__facts dt {
+  color: var(--text-3);
+}
+
+.report__meta dd,
+.report__facts dd {
+  margin: 0;
+}
+
+.report__section {
+  margin-top: var(--s-6);
+}
+
+.report__section h2 {
+  margin-bottom: var(--s-2);
+  font: var(--t-section);
+}
+
+.report__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-6);
+  margin: var(--s-2) 0 0;
+  font-size: 13px;
+}
+
+.report__facts--tight {
+  margin-top: var(--s-3);
+}
+
+.report__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) 20px;
+  margin-bottom: var(--s-2);
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.report__table {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--t-table);
+}
+
+.report__table th {
+  padding: 6px var(--s-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-3);
+  font-weight: 500;
+  text-align: left;
+}
+
+.report__table td {
+  padding: 6px var(--s-3);
+  border-bottom: 1px solid var(--border-row);
+  vertical-align: top;
+}
+
+.report__table th:first-child,
+.report__table td:first-child {
+  padding-left: 0;
+}
+
+.report__num {
+  text-align: right;
+}
+
+.report__unit {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.report__tone--crit {
+  color: var(--crit);
+  font-weight: 500;
+}
+
+.report__tone--warn {
+  color: var(--warn-text);
+}
+
+.report__tone--nodata {
+  color: var(--text-3);
+}
+
+.report__messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.report__messages li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--border-row);
+}
+
+.report__message-meta {
+  color: var(--text-2);
+}
+
+.report__foot {
+  margin-top: var(--s-6);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--border);
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .report {
+    padding-right: var(--page-x-mobile);
+    padding-left: var(--page-x-mobile);
+  }
+
+  .report__sheet {
+    padding: var(--s-4);
+  }
+}
+
+/* Печать: только лист отчёта, без шапки приложения и кнопок */
+@media print {
+  .header,
+  .report__actions {
+    display: none !important;
+  }
+
+  .report {
+    padding: 0;
+  }
+
+  .report__sheet {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+  }
+
+  .report__section {
+    break-inside: avoid;
+  }
+}

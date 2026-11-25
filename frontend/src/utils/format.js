@@ -19,6 +19,8 @@ export const DEVICE_NAMES = {
 }
 
 const WEEKDAYS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября',
+  'ноября', 'декабря']
 const pad = (n) => String(n).padStart(2, '0')
 
 function isToday(date) {
@@ -52,6 +54,11 @@ export function formatToday(date = new Date()) {
   return `${WEEKDAYS[date.getDay()]}, ${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()}`
 }
 
+// Сегодня, 28 октября
+export function formatTodayLong(date = new Date()) {
+  return `Сегодня, ${date.getDate()} ${MONTHS[date.getMonth()]}`
+}
+
 export function plural(n, one, few, many) {
   const mod10 = n % 10
   const mod100 = n % 100
@@ -63,6 +70,18 @@ export function plural(n, one, few, many) {
 // 67 л., 71 г.
 export function formatAge(age) {
   return `${age} ${plural(age, 'г.', 'г.', 'л.')}`
+}
+
+// 02.10.2026
+export function formatDate(iso) {
+  if (!iso) return '—'
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T00:00:00`) : new Date(iso)
+  return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()}`
+}
+
+// Сколько минут прошло между двумя моментами
+export function minutesBetween(fromIso, toIso) {
+  return Math.max(0, Math.round((new Date(toIso) - new Date(fromIso)) / 60000))
 }
 
 export function daysSince(iso) {

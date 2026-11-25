@@ -174,8 +174,9 @@ def record_measurement(cur, patient, kind, value, value2=None, source='manual', 
 def ensure_no_data_alerts(cur, doctor_id):
     """Алерт «нет данных», если у пациента нет измерений NO_DATA_DAYS дней и такой алерт ещё не создан."""
     cur.execute(
-        """INSERT INTO alerts (patient_id, level, rule)
-           SELECT p.user_id, 'nodata', %s
+        """INSERT INTO alerts (patient_id, level, rule, created_at)
+           SELECT p.user_id, 'nodata', %s,
+                  COALESCE(m.last, p.enrolled_at::timestamptz) + make_interval(days => %s)
            FROM patients p
            LEFT JOIN alert_settings s_p ON s_p.patient_id = p.user_id
            LEFT JOIN alert_settings s_n ON s_n.nosology = p.nosology
@@ -186,5 +187,5 @@ def ensure_no_data_alerts(cur, doctor_id):
              AND NOT EXISTS (
                  SELECT 1 FROM alerts a WHERE a.patient_id = p.user_id AND a.level = 'nodata'
                    AND a.created_at > COALESCE(m.last, p.enrolled_at::timestamptz))""",
-        (f'нет измерений более {NO_DATA_DAYS} дней', doctor_id, NO_DATA_DAYS),
+        (f'нет измерений более {NO_DATA_DAYS} дней', NO_DATA_DAYS, doctor_id, NO_DATA_DAYS),
     )

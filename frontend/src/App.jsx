@@ -5,6 +5,16 @@ import Login from './pages/Login'
 import Recover from './pages/Recover'
 import Register from './pages/Register'
 import Worklist from './pages/Worklist'
+import Record from './pages/Record'
+import Alerts from './pages/Alerts'
+import Thresholds from './pages/Thresholds'
+import Messages from './pages/Messages'
+import Reports from './pages/Reports'
+import Report from './pages/Report'
+import PatientLayout from './components/PatientLayout'
+import PatientHome from './pages/PatientHome'
+import PatientEntry from './pages/PatientEntry'
+import PatientAlert from './pages/PatientAlert'
 
 // Этап 1: вход, заявка, восстановление пароля, первый вход.
 // Этап 2: врач. Страницы пациента, родственника и администратора добавляются следующими этапами.
@@ -18,6 +28,17 @@ function App() {
         <Route path="/welcome" element={<FirstLogin />} />
         <Route path="/doctor" element={<DoctorLayout />}>
           <Route index element={<Worklist />} />
+          <Route path="patients/:patientId" element={<Record />} />
+          <Route path="alerts" element={<Alerts />} />
+          <Route path="thresholds" element={<Thresholds />} />
+          <Route path="messages" element={<Messages />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="reports/:reportId" element={<Report />} />
+        </Route>
+        <Route path="/patient" element={<PatientLayout />}>
+          <Route index element={<PatientHome />} />
+          <Route path="entry" element={<PatientEntry />} />
+          <Route path="alert" element={<PatientAlert />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
