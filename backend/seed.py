@@ -246,11 +246,20 @@ def seed_demo():
             )
             doctor_ids.append(doctor_id)
 
+        patient_ids = {}
         for data in PATIENTS:
             patient_id = seed_patient(cur, doctor_ids[0], data, now)
             seed_medications(cur, patient_id, data['nosology'], now)
             seed_reminders(cur, patient_id, data['nosology'])
             seed_messages(cur, patient_id, doctor_ids[0], now)
+            patient_ids[data['phone']] = patient_id
+
+        relative_id = upsert_user(cur, 'relative', 'Ковалёв Дмитрий Сергеевич', '79010000102',
+                                  'relative@demo.ru', DEMO_PASSWORD)
+        cur.execute(
+            'INSERT INTO relative_links (relative_id, patient_id) VALUES (%s, %s) ON CONFLICT (relative_id) DO NOTHING',
+            (relative_id, patient_ids['79000000102']),
+        )
 
     click.echo(f'Готово. Пароль врачей, администратора и пациентов: {DEMO_PASSWORD}; '
                f'пациентка +7 900 000-01-01 входит по временному паролю {TEMP_PASSWORD}.')

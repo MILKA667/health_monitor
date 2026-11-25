@@ -13,6 +13,7 @@ import auth
 import dialogs
 import doctor
 import patient
+import relative
 import reports
 import seed
 import thresholds
@@ -43,6 +44,7 @@ app.register_blueprint(thresholds.bp)
 app.register_blueprint(dialogs.bp)
 app.register_blueprint(reports.bp)
 app.register_blueprint(patient.bp)
+app.register_blueprint(relative.bp)
 app.cli.add_command(seed.seed_demo)
 
 

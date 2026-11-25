@@ -21,6 +21,7 @@ venv\Scripts\python app.py
 |---|---|---|
 | Администратор | admin@demo.ru | demo1234 |
 | Врач | doctor@demo.ru | demo1234 |
+| Родственник | relative@demo.ru | demo1234 |
 | Пациент, первый вход | +7 900 000-01-01 | temp1234 (временный) |
 | Пациент | +7 900 000-01-02 | demo1234 |
 

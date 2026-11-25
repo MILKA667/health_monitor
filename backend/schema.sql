@@ -254,3 +254,10 @@ CREATE TABLE IF NOT EXISTS patient_settings (
     push_enabled  BOOLEAN NOT NULL DEFAULT TRUE,
     sms_enabled   BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+-- Родственник получает доступ к показателям только по ссылке от пациента
+CREATE TABLE IF NOT EXISTS relative_links (
+    relative_id   INTEGER PRIMARY KEY REFERENCES users (id),
+    patient_id    INTEGER NOT NULL REFERENCES patients (user_id),
+    push_enabled  BOOLEAN NOT NULL DEFAULT TRUE
+);

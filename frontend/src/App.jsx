@@ -21,6 +21,7 @@ import PatientChat from './pages/PatientChat'
 import PatientProfile from './pages/PatientProfile'
 import PatientDevices from './pages/PatientDevices'
 import PatientPassword from './pages/PatientPassword'
+import RelativeHome from './pages/RelativeHome'
 
 // Этап 1: вход, заявка, восстановление пароля, первый вход.
 // Этап 2: врач. Страницы пациента, родственника и администратора добавляются следующими этапами.
@@ -52,6 +53,7 @@ function App() {
           <Route path="devices" element={<PatientDevices />} />
           <Route path="password" element={<PatientPassword />} />
         </Route>
+        <Route path="/relative" element={<RelativeHome />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
