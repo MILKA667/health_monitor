@@ -5,6 +5,7 @@ import './style.css'
 const PATIENT_TABS = [
   { to: '/patient', label: 'Сегодня', end: true },
   { to: '/patient/history', label: 'История' },
+  { to: '/patient/chat', label: 'Чат' },
 ]
 
 // Нижняя навигация пациента; у активной вкладки синяя полоса сверху

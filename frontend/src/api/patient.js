@@ -44,3 +44,12 @@ export function setMeasurementReminder(reminderId, enabled) {
 export function addMeasurementReminder({ kind, time }) {
   return request('/patient/reminders/measurements', { method: 'POST', body: { kind, time } })
 }
+
+// Переписка с врачом: врач и часы ответа, последний алерт, сообщения
+export function getChat() {
+  return request('/patient/chat')
+}
+
+export function sendChat(body) {
+  return request('/patient/chat', { method: 'POST', body: { body } })
+}

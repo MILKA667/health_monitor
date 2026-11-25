@@ -17,6 +17,7 @@ import PatientEntry from './pages/PatientEntry'
 import PatientAlert from './pages/PatientAlert'
 import PatientHistory from './pages/PatientHistory'
 import PatientReminders from './pages/PatientReminders'
+import PatientChat from './pages/PatientChat'
 
 // Этап 1: вход, заявка, восстановление пароля, первый вход.
 // Этап 2: врач. Страницы пациента, родственника и администратора добавляются следующими этапами.
@@ -43,6 +44,7 @@ function App() {
           <Route path="alert" element={<PatientAlert />} />
           <Route path="history" element={<PatientHistory />} />
           <Route path="reminders" element={<PatientReminders />} />
+          <Route path="chat" element={<PatientChat />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

@@ -4,6 +4,7 @@ import re
 
 from flask import Blueprint, jsonify, request
 
+import chat
 from db import audit, db_cursor
 from doctor import chart_payload, stats_payload
 from monitoring import (NOSOLOGY_KIND, UNITS, evaluate, fmt_number, fmt_value, load_thresholds, record_measurement,
@@ -389,6 +390,65 @@ def history():
         'stats': stats_payload(kind, rows, thresholds, patient['pef_best']),
         'measurements': [measurement_card(row, thresholds, patient) for row in reversed(rows)],
     })
+
+
+@bp.get('/chat')
+@login_required('patient')
+def chat_thread():
+    """Переписка с врачом и последний критический алерт для системного сообщения."""
+    user = current_user()
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+        cur.execute(
+            'SELECT u.name, d.specialty FROM doctors d JOIN users u ON u.id = d.user_id WHERE d.user_id = %s',
+            (patient['doctor_id'],),
+        )
+        doctor = cur.fetchone()
+        history = chat.messages_for(cur, patient['user_id'])
+        chat.mark_read(cur, patient['user_id'], user['id'])
+        cur.execute(
+            """SELECT a.rule, a.created_at, m.value, m.value2, m.kind FROM alerts a
+               LEFT JOIN measurements m ON m.id = a.measurement_id
+               WHERE a.patient_id = %s AND a.level = 'crit'
+               ORDER BY a.created_at DESC LIMIT 1""",
+            (patient['user_id'],),
+        )
+        alert = cur.fetchone()
+        audit(cur, 'chat_viewed', user['id'], f"patient:{patient['user_id']}", request.remote_addr)
+
+    return jsonify({
+        'doctor': {
+            'name': short_name(doctor['name']) if doctor else None,
+            'specialty': doctor['specialty'] if doctor else None,
+            'hours': 'отвечает с 9:00 до 18:00',
+        },
+        'alert': alert and {
+            'createdAt': iso(alert['created_at']),
+            'value': fmt_value(alert) if alert['kind'] else None,
+            'unit': UNITS[alert['kind']] if alert['kind'] else None,
+            'rule': alert['rule'],
+        },
+        'messages': [chat.message_json(row, user['id']) for row in history],
+    })
+
+
+@bp.post('/chat')
+@login_required('patient')
+def chat_send():
+    user = current_user()
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+        try:
+            row = chat.add_message(cur, patient['user_id'], user['id'],
+                                   (request.get_json(silent=True) or {}).get('body'))
+        except ValueError as e:
+            return error(str(e))
+        audit(cur, 'message_sent', user['id'], f"patient:{patient['user_id']}", request.remote_addr)
+    return jsonify(chat.message_json(row, user['id'])), 201
 
 
 @bp.get('/alerts/latest')

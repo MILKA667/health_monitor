@@ -1,4 +1,5 @@
 """Переписка пациента с врачом. Родственник переписку не видит."""
+from security import short_name
 
 MAX_MESSAGE_LENGTH = 2000
 
@@ -9,6 +10,7 @@ def message_json(row, reader_id):
         'body': row['body'],
         'createdAt': row['created_at'].isoformat(),
         'author': row['sender_name'],
+        'authorShort': short_name(row['sender_name']),
         'senderRole': row['sender_role'],
         'mine': row['sender_id'] == reader_id,
         'read': row['read_at'] is not None,

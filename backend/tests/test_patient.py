@@ -183,3 +183,39 @@ def test_reminders_do_not_touch_foreign_patient(client, demo):
     login(client, '+79000000103')
     assert client.post('/api/patient/reminders/medications/1', json={'enabled': False}).status_code == 404
     assert client.post('/api/patient/reminders/measurements/1', json={'enabled': False}).status_code == 404
+
+
+def test_chat(client, demo):
+    login(client, '+79000000102')
+    data = client.get('/api/patient/chat').get_json()
+
+    assert data['doctor'] == {'name': 'Смирнова Е. А.', 'specialty': 'эндокринолог',
+                              'hours': 'отвечает с 9:00 до 18:00'}
+    assert [(message['authorShort'], message['mine']) for message in data['messages']] == [
+        ('Ковалёва Н. П.', True), ('Смирнова Е. А.', False), ('Ковалёва Н. П.', True)]
+    assert data['alert']['value'] == '2,9' and data['alert']['unit'] == 'ммоль/л'
+
+    with db_cursor() as cur:
+        cur.execute("SELECT count(*) AS n FROM audit_log WHERE action = 'chat_viewed'")
+        assert cur.fetchone()['n'] == 1
+
+
+def test_chat_send_adds_unread_for_doctor(client, make_client, demo):
+    login(client, '+79000000102')
+    response = client.post('/api/patient/chat', json={'body': 'Спасибо, стало лучше.'})
+    assert response.status_code == 201
+    assert response.get_json()['mine'] is True
+    assert client.post('/api/patient/chat', json={'body': '   '}).status_code == 400
+
+    doctor = make_client()
+    login(doctor, 'doctor@demo.ru')
+    conversation = doctor.get('/api/doctor/messages').get_json()['conversations'][0]
+    assert conversation['unread'] == 2
+    assert conversation['lastMessage']['body'] == 'Спасибо, стало лучше.'
+    assert conversation['lastMessage']['mine'] is False
+
+
+def test_chat_requires_patient(client, demo):
+    assert client.get('/api/patient/chat').status_code == 401
+    login(client, 'doctor@demo.ru')
+    assert client.get('/api/patient/chat').status_code == 403
