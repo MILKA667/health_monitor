@@ -1,11 +1,16 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../api/client'
 import PatientProfile from '.'
 
-vi.mock('../../api/patient', () => ({ getProfile: vi.fn(), updateProfile: vi.fn() }))
+vi.mock('../../api/patient', () => ({
+  getProfile: vi.fn(),
+  updateProfile: vi.fn(),
+  getSurveys: vi.fn(),
+  submitSurvey: vi.fn(),
+}))
 vi.mock('../../api/auth', () => ({ logout: vi.fn() }))
 const api = await import('../../api/patient')
 
@@ -34,7 +39,10 @@ describe('PatientProfile', () => {
   beforeEach(() => {
     api.getProfile.mockReset()
     api.updateProfile.mockReset()
+    api.getSurveys.mockReset()
+    api.submitSurvey.mockReset()
     api.getProfile.mockResolvedValue(PROFILE)
+    api.getSurveys.mockResolvedValue({ responses: {} })
   })
 
   it('показывает врача, близкого, устройства и согласия', async () => {
@@ -66,5 +74,40 @@ describe('PatientProfile', () => {
     await userEvent.click(sms)
     expect(await screen.findByRole('alert')).toHaveTextContent('Выберите хотя бы один способ')
     expect(sms).toBeChecked()
+  })
+
+  it('показывает сохранённые оценки опросов', async () => {
+    api.getSurveys.mockResolvedValue({
+      responses: {
+        nps: { score: 9, createdAt: NOW },
+        csat: { score: 5, createdAt: NOW },
+      },
+    })
+    renderProfile()
+
+    expect(await screen.findByText('Ваша оценка: 9 · 27.08.2026')).toBeInTheDocument()
+    expect(screen.getByText('Ваша оценка: 5 · 27.08.2026')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Насколько вероятно, что вы порекомендуете сервис?' })).toBeInTheDocument()
+  })
+
+  it('отправляет оценку NPS и показывает её сразу', async () => {
+    api.submitSurvey.mockResolvedValue({ ok: true, id: 1, createdAt: NOW })
+    renderProfile()
+
+    const group = await screen.findByRole('group', { name: 'Насколько вероятно, что вы порекомендуете сервис?' })
+    await userEvent.click(within(group).getByRole('button', { name: '9' }))
+
+    expect(api.submitSurvey).toHaveBeenCalledWith({ kind: 'nps', score: 9 })
+    expect(await screen.findByText('Ваша оценка: 9 · 27.08.2026')).toBeInTheDocument()
+  })
+
+  it('показывает ошибку, если опрос не сохранился', async () => {
+    api.submitSurvey.mockRejectedValue(new ApiError('Оценка должна быть от 0 до 10.', 400))
+    renderProfile()
+
+    const group = await screen.findByRole('group', { name: 'Насколько вероятно, что вы порекомендуете сервис?' })
+    await userEvent.click(within(group).getByRole('button', { name: '10' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Оценка должна быть от 0 до 10')
   })
 })

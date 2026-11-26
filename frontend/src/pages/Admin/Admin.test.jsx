@@ -93,7 +93,11 @@ const ANALYTICS = {
     measurements: 40, byKind: { glucose: 20, bp: 15, pef: 5 },
     activePatients: 9, withoutData: 1, adherence: 0.8,
   },
-  quality: { nps: null, csat: null, ces: null, responses: 0 },
+  quality: {
+    nps: 25.0, npsResponses: 4, promoters: 2, detractors: 1,
+    csat: 4.5, csatResponses: 4, csatSatisfied: 0.75,
+    ces: 4.2, cesResponses: 4, responses: 12,
+  },
   monetization: null,
 }
 
@@ -188,6 +192,8 @@ describe('Admin', () => {
     expect(await screen.findByText('Вовлечённость')).toBeInTheDocument()
     expect(screen.getByText('DAU')).toBeInTheDocument()
     expect(screen.getByText('Приверженность')).toBeInTheDocument()
+    expect(screen.getByText('+25')).toBeInTheDocument()
+    expect(screen.getByText('4,5 из 5')).toBeInTheDocument()
     expect(api.getAnalytics).toHaveBeenCalledWith(30)
 
     await userEvent.click(screen.getByRole('button', { name: '7 дней' }))

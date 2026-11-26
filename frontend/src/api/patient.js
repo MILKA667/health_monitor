@@ -85,3 +85,13 @@ export function setDeviceConnected(deviceId, connected) {
 export function changePassword(data) {
   return request('/patient/password', { method: 'POST', body: data })
 }
+
+// Опросы качества: последние ответы по каждому типу (nps, csat, ces)
+export function getSurveys() {
+  return request('/patient/surveys')
+}
+
+// Ответ на опрос: { kind: 'nps' | 'csat' | 'ces', score, comment? }
+export function submitSurvey(data) {
+  return request('/patient/surveys', { method: 'POST', body: data })
+}

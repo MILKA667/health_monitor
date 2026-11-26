@@ -280,3 +280,15 @@ CREATE TABLE IF NOT EXISTS relative_links (
     patient_id    INTEGER NOT NULL REFERENCES patients (user_id),
     push_enabled  BOOLEAN NOT NULL DEFAULT TRUE
 );
+
+-- Опросы качества: NPS (0–10), CSAT и CES (1–5). Ответы не удаляются, дашборд берёт последний по пользователю.
+CREATE TABLE IF NOT EXISTS survey_responses (
+    id          SERIAL PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    kind        TEXT NOT NULL CHECK (kind IN ('nps', 'csat', 'ces')),
+    score       INTEGER NOT NULL,
+    comment     TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK ((kind = 'nps' AND score BETWEEN 0 AND 10) OR (kind IN ('csat', 'ces') AND score BETWEEN 1 AND 5))
+);
+CREATE INDEX IF NOT EXISTS survey_responses_user_kind ON survey_responses (user_id, kind, created_at DESC);

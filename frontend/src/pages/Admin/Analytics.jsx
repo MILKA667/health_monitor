@@ -11,6 +11,19 @@ function percent(value) {
   return `${Math.round(value * 100)}%`
 }
 
+// Средняя оценка с запятой: 4,6
+function score(value) {
+  if (value === null || value === undefined) return '—'
+  return String(value).replace('.', ',')
+}
+
+// NPS со знаком: +42, −17
+function nps(value) {
+  if (value === null || value === undefined) return '—'
+  const rounded = Math.round(value)
+  return `${rounded > 0 ? '+' : ''}${rounded}`
+}
+
 function Metric({ label, value, hint, tone }) {
   return (
     <div className={`metric${tone ? ` metric--${tone}` : ''}`}>
@@ -180,16 +193,29 @@ function Analytics() {
           <section className="panel analytics__section" aria-label="Качество и монетизация">
             <h2 className="analytics__title">Качество и монетизация</h2>
             <div className="metrics">
-              <Metric label="NPS" value="—" hint="опросы не подключены" />
-              <Metric label="CSAT" value="—" hint="опросы не подключены" />
-              <Metric label="CES" value="—" hint="опросы не подключены" />
+              <Metric
+                label="NPS"
+                value={nps(data.quality.nps)}
+                hint={`${data.quality.npsResponses} ответов · ${data.quality.promoters} промоутеров, ${data.quality.detractors} критиков`}
+              />
+              <Metric
+                label="CSAT"
+                value={data.quality.csat === null ? '—' : `${score(data.quality.csat)} из 5`}
+                hint={`${data.quality.csatResponses} ответов · ${percent(data.quality.csatSatisfied)} довольны`}
+              />
+              <Metric
+                label="CES"
+                value={data.quality.ces === null ? '—' : `${score(data.quality.ces)} из 5`}
+                hint={`${data.quality.cesResponses} ответов`}
+              />
+              <Metric label="Ответов на опросы" value={data.quality.responses} hint="за период" />
               <Metric label="ARPU" value="—" hint="биллинг не подключён" />
               <Metric label="ARPPU" value="—" hint="биллинг не подключён" />
               <Metric label="CAC" value="—" hint="биллинг не подключён" />
             </div>
             <p className="analytics__note">
-              NPS, CSAT и CES появятся после включения опросов. ARPU, ARPPU и CAC — после подключения
-              биллинга. Пока продукт бесплатный, монетизацию не считаем.
+              NPS — по последнему ответу пациента за период, CSAT и CES — средние оценки. Пока нет ответов,
+              значения пустые. ARPU, ARPPU и CAC появятся после подключения биллинга.
             </p>
           </section>
         </>
