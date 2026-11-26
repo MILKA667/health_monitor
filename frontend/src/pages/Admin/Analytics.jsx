@@ -177,16 +177,19 @@ function Analytics() {
             </div>
           </section>
 
-          <section className="panel analytics__section" aria-label="Качество">
-            <h2 className="analytics__title">Качество</h2>
+          <section className="panel analytics__section" aria-label="Качество и монетизация">
+            <h2 className="analytics__title">Качество и монетизация</h2>
             <div className="metrics">
               <Metric label="NPS" value="—" hint="опросы не подключены" />
               <Metric label="CSAT" value="—" hint="опросы не подключены" />
               <Metric label="CES" value="—" hint="опросы не подключены" />
+              <Metric label="ARPU" value="—" hint="биллинг не подключён" />
+              <Metric label="ARPPU" value="—" hint="биллинг не подключён" />
+              <Metric label="CAC" value="—" hint="биллинг не подключён" />
             </div>
             <p className="analytics__note">
-              NPS, CSAT и CES появятся после подключения опросов. Монетизация не отображается:
-              в продукте пока нет биллинга.
+              NPS, CSAT и CES появятся после включения опросов. ARPU, ARPPU и CAC — после подключения
+              биллинга. Пока продукт бесплатный, монетизацию не считаем.
             </p>
           </section>
         </>
