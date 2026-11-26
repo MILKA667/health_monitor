@@ -5,7 +5,7 @@
 | Событие | Что происходит |
 |---|---|
 | push в любую ветку `feature/**`, `develop`, PR | фронтенд: ESLint, Vitest, сборка; бэкенд: pytest на PostgreSQL 16 |
-| push в `main` (слияние PR) | то же, затем сборка Docker-образов в GHCR и выкатка на сервер по SSH |
+| push в `main` (слияние PR) | то же, затем сборка Docker-образов и выкатка на сервер по SSH |
 
 Деплой запускается только если оба набора тестов зелёные. На сервере работают четыре контейнера:
 PostgreSQL, Flask (gunicorn), Telegram-бот и nginx, который отдаёт фронтенд и проксирует `/api`.
@@ -27,7 +27,7 @@ ssh-keygen -t ed25519 -f healthmonitor_deploy -N ""
 ssh-copy-id -i healthmonitor_deploy.pub deploy@<сервер>
 ```
 
-Файл настроек на сервере — `/opt/healthmonitor/.env` по образцу [`.env.example`](.env.example). Пароль БД и `SECRET_KEY` сгенерируйте заново, в репозиторий их не кладите.
+Файл настроек на сервере — `/opt/healthmonitor/.env` по образцу [`.env.example`](.env.example).
 
 ## 2. Секреты GitHub
 
@@ -53,25 +53,3 @@ cd /opt/healthmonitor
 docker compose exec backend flask --app app create-user --role admin --name "Администратор" --email admin@clinic.ru
 ```
 
-Демо-данные (`seed-demo`) на продакшене не запускайте.
-
-## HTTPS
-
-nginx в контейнере слушает HTTP. Для HTTPS поставьте перед ним прокси на хосте (Caddy или nginx + certbot), задайте в `.env` `WEB_PORT=8080` и `SESSION_COOKIE_SECURE=1`.
-
-## Откат
-
-Каждый образ помечен SHA коммита. Вернуть предыдущую версию:
-
-```sh
-cd /opt/healthmonitor
-IMAGE_TAG=<sha предыдущего коммита> docker compose up -d
-```
-
-Схема БД меняется только добавлением таблиц и колонок, поэтому старая версия бэкенда с новой схемой работает.
-
-## Резервные копии
-
-```sh
-docker compose exec -T db pg_dump -U healthmonitor health_monitor | gzip > backup-$(date +%F).sql.gz
-```
