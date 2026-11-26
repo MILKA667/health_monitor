@@ -57,37 +57,3 @@ Reminders, Chat, Profile, Devices, Password. Общее: NewPassword, маршр
 поэтому тесты не зависят от запущенного backend. `src/test/setup.js` подключает
 `jest-dom` и очищает DOM после каждого теста.
 
-## Что показать преподавателю
-
-1. **Запуск вживую** — команды выше, в выводе `110 passed` и `75 passed`.
-2. **Интеграционный тест API** — `backend/tests/test_doctor.py::test_alerts_page`:
-   проверяет страницу алертов через настоящий HTTP-клиент Flask и реальную БД.
-3. **Тест бизнес-логики** — `backend/tests/test_monitoring.py::test_glucose_levels`:
-   параметризованный, проверяет границы порогов.
-4. **Тест UI** — `frontend/src/pages/Alerts/Alerts.test.jsx`: рендер, вкладки,
-   принятие алерта, вызов API через мок.
-5. **CI** — вкладка Actions в GitHub: тесты запускаются автоматически, при падении
-   деплой не выполняется.
-
-### Демонстрация, что тесты ловят регрессию
-
-Можно временно сломать правило и показать падение:
-
-```powershell
-# В backend/monitoring.py поменять порог 3.9 на 1.0, затем:
-cd backend
-venv\Scripts\python -m pytest tests/test_monitoring.py -q
-# ожидаемо: падение test_glucose_levels
-```
-
-После демонстрации изменение откатить.
-
-## Чего тестами не покрыто
-
-- Страницы `Register`, `Recover`, `FirstLogin`, `Worklist` (сама страница; её группа
-  и карточка покрыты).
-- Компоненты `AlertBar`, `AuthLayout`, `Button`, `Chart`, `Choice`, `ConsentText`,
-  `DoctorLayout`, `Field`, `FormError`, `Header`, `Panel`, `PatientLayout`,
-  `PatientTabBar`, `SegmentedControl`, `StatusMarker`, `StepProgress`, `TextTabs`,
-  `ValueCell`.
-- E2E-тесты в браузере (Playwright/Cypress) отсутствуют.
