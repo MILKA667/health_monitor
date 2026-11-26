@@ -233,6 +233,27 @@ def profile():
     return jsonify(payload)
 
 
+CONSENT_KINDS = {'personal_data', 'relative_sms'}
+
+
+@bp.post('/consents')
+@login_required('patient')
+def sign_consent():
+    """Подписание согласия из профиля. Текст документа подставляется на фронтенде."""
+    data = request.get_json(silent=True) or {}
+    kind = str(data.get('kind') or '')
+    if kind not in CONSENT_KINDS:
+        return error('Неизвестный тип согласия.')
+    with db_cursor() as cur:
+        patient = own_patient(cur)
+        if not patient:
+            return error('Карта пациента не заполнена. Позвоните в регистратуру.', 404)
+        cur.execute('INSERT INTO consents (user_id, kind) VALUES (%s, %s)', (patient['user_id'], kind))
+        audit(cur, 'consent_signed', patient['user_id'], kind, request.remote_addr)
+        payload = profile_payload(cur, patient)
+    return jsonify(payload)
+
+
 @bp.post('/profile')
 @login_required('patient')
 def update_profile():
