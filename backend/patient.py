@@ -729,3 +729,48 @@ def latest_alert():
         'memo': memo and {'text': memo['body'], 'createdAt': iso(memo['created_at']),
                           'author': short_name(doctor['name']) if doctor else None},
     })
+
+
+SURVEY_KINDS = {'nps': (0, 10), 'csat': (1, 5), 'ces': (1, 5)}
+
+
+@bp.get('/surveys')
+@login_required('patient')
+def surveys():
+    """Последние ответы пациента по каждому опросу."""
+    with db_cursor() as cur:
+        cur.execute(
+            """SELECT DISTINCT ON (kind) kind, score, created_at
+               FROM survey_responses WHERE user_id = %s
+               ORDER BY kind, created_at DESC""",
+            (current_user()['id'],),
+        )
+        rows = cur.fetchall()
+    return jsonify({'responses': {
+        row['kind']: {'score': row['score'], 'createdAt': iso(row['created_at'])} for row in rows
+    }})
+
+
+@bp.post('/surveys')
+@login_required('patient')
+def submit_survey():
+    """Ответ на опрос качества: NPS 0–10, CSAT и CES 1–5."""
+    data = request.get_json(silent=True) or {}
+    kind = str(data.get('kind', ''))
+    if kind not in SURVEY_KINDS:
+        return error('Неизвестный тип опроса.')
+    score = data.get('score')
+    if isinstance(score, bool) or not isinstance(score, int):
+        return error('Оценка должна быть числом.')
+    low, high = SURVEY_KINDS[kind]
+    if not low <= score <= high:
+        return error(f'Оценка должна быть от {low} до {high}.')
+    comment = str(data.get('comment') or '').strip()[:500] or None
+    with db_cursor() as cur:
+        cur.execute(
+            """INSERT INTO survey_responses (user_id, kind, score, comment)
+               VALUES (%s, %s, %s, %s) RETURNING id, created_at""",
+            (current_user()['id'], kind, score, comment),
+        )
+        row = cur.fetchone()
+    return jsonify({'ok': True, 'id': row['id'], 'createdAt': iso(row['created_at'])})

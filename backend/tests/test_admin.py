@@ -243,6 +243,26 @@ def test_analytics_dashboard(client, demo):
     assert client.get('/api/admin/analytics?days=5').status_code == 400
 
 
+def test_analytics_quality(client, demo):
+    login(client, 'admin@demo.ru')
+    with db_cursor() as cur:
+        cur.execute(
+            """INSERT INTO survey_responses (user_id, kind, score, created_at) VALUES
+               (4, 'nps', 9, now() - interval '2 days'),
+               (4, 'nps', 3, now() - interval '1 day'),
+               (4, 'csat', 5, now() - interval '1 day'),
+               (4, 'ces', 2, now() - interval '1 day')"""
+        )
+
+    quality = client.get('/api/admin/analytics?days=30').get_json()['quality']
+    # NPS берётся по последнему ответу пользователя: 3 — критик, промоутеров нет
+    assert quality['nps'] == -100.0
+    assert quality['promoters'] == 0 and quality['detractors'] == 1
+    assert quality['csat'] == 5.0 and quality['csatSatisfied'] == 1.0
+    assert quality['ces'] == 2.0
+    assert quality['responses'] == 3
+
+
 def test_deleted_account_cannot_be_reapproved(client, demo):
     login(client, 'admin@demo.ru')
     app_id = applications(client)['relative']['id']

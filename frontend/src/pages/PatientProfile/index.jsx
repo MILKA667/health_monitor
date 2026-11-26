@@ -1,10 +1,31 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { getProfile, updateProfile } from '../../api/patient'
+import { getProfile, getSurveys, submitSurvey, updateProfile } from '../../api/patient'
 import { logout } from '../../api/auth'
 import FormError from '../../components/FormError'
 import { formatDate } from '../../utils/format'
 import './style.css'
+
+const SURVEYS = [
+  {
+    kind: 'nps',
+    title: 'Насколько вероятно, что вы порекомендуете сервис?',
+    hint: '0 — вряд ли, 10 — точно да',
+    scores: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  },
+  {
+    kind: 'csat',
+    title: 'Насколько вы удовлетворены сервисом?',
+    hint: '1 — совсем нет, 5 — полностью',
+    scores: [1, 2, 3, 4, 5],
+  },
+  {
+    kind: 'ces',
+    title: 'Насколько легко пользоваться сервисом?',
+    hint: '1 — сложно, 5 — легко',
+    scores: [1, 2, 3, 4, 5],
+  },
+]
 
 function relation(name) {
   return name.split(',').pop().trim()
@@ -15,11 +36,45 @@ function devicesText(devices) {
   return devices.map((device) => `${device.name.toLowerCase()} ${device.connected ? 'подключён' : 'отключён'}`).join(', ')
 }
 
+// Один вопрос опроса: шкала оценок и сохранённый ответ
+function SurveyQuestion({ survey, saved, saving, onSave }) {
+  return (
+    <div className="survey">
+      <div className="survey__head">
+        <span className="survey__title">{survey.title}</span>
+        <span className="survey__hint">{survey.hint}</span>
+      </div>
+      <div className="survey__scores" role="group" aria-label={survey.title}>
+        {survey.scores.map((score) => (
+          <button
+            key={score}
+            type="button"
+            className={`survey__score${saved?.score === score ? ' survey__score--active' : ''}`}
+            aria-pressed={saved?.score === score}
+            disabled={saving}
+            onClick={() => onSave(survey.kind, score)}
+          >
+            {score}
+          </button>
+        ))}
+      </div>
+      {saved && (
+        <span className="survey__saved">
+          Ваша оценка: {saved.score} · {formatDate(saved.createdAt)}
+        </span>
+      )}
+    </div>
+  )
+}
+
 // Профиль пациента: врач, близкий, устройства, напоминания, согласия и безопасность
 function PatientProfile() {
   const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
   const [error, setError] = useState('')
+  const [surveys, setSurveys] = useState({})
+  const [surveyError, setSurveyError] = useState('')
+  const [savingSurvey, setSavingSurvey] = useState('')
 
   useEffect(() => {
     getProfile()
@@ -28,6 +83,12 @@ function PatientProfile() {
         setError('')
       })
       .catch((err) => setError(err.message))
+  }, [])
+
+  useEffect(() => {
+    getSurveys()
+      .then((data) => setSurveys(data.responses ?? {}))
+      .catch(() => {})
   }, [])
 
   async function save(changes) {
@@ -44,6 +105,19 @@ function PatientProfile() {
   async function handleLogout() {
     await logout().catch(() => {})
     navigate('/login')
+  }
+
+  async function saveSurvey(kind, score) {
+    setSurveyError('')
+    setSavingSurvey(kind)
+    try {
+      const result = await submitSurvey({ kind, score })
+      setSurveys((current) => ({ ...current, [kind]: { score, createdAt: result.createdAt } }))
+    } catch (err) {
+      setSurveyError(err.message)
+    } finally {
+      setSavingSurvey('')
+    }
   }
 
   if (!profile) {
@@ -158,6 +232,21 @@ function PatientProfile() {
         <p className="patient-hint">
           Отзыв согласия на обработку данных прекращает наблюдение. Для отзыва обратитесь к врачу или в клинику.
         </p>
+      </section>
+
+      <section className="profile__section" aria-labelledby="profile-surveys">
+        <h2 id="profile-surveys">Оценка сервиса</h2>
+        <p className="patient-hint">Ответы помогают улучшать сервис. Оценку можно изменить в любой момент.</p>
+        {surveyError && <p className="profile__channel-error" role="alert">{surveyError}</p>}
+        {SURVEYS.map((survey) => (
+          <SurveyQuestion
+            key={survey.kind}
+            survey={survey}
+            saved={surveys[survey.kind]}
+            saving={savingSurvey === survey.kind}
+            onSave={saveSurvey}
+          />
+        ))}
       </section>
 
       <section className="profile__section" aria-labelledby="profile-security">

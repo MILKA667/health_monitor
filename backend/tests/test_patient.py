@@ -303,3 +303,26 @@ def test_password_change(client, make_client, demo):
     assert client.get('/api/patient/profile').status_code == 200
 
     assert 'пароль изменён' in last_notification_text()
+
+
+def test_surveys(client, make_client, demo):
+    login(client, '+79000000102')
+    assert client.get('/api/patient/surveys').get_json()['responses'] == {}
+
+    assert client.post('/api/patient/surveys', json={'kind': 'nps', 'score': 9}).status_code == 200
+    assert client.post('/api/patient/surveys', json={'kind': 'csat', 'score': 5}).status_code == 200
+    assert client.post('/api/patient/surveys', json={'kind': 'ces', 'score': 2}).status_code == 200
+
+    responses = client.get('/api/patient/surveys').get_json()['responses']
+    assert responses['nps']['score'] == 9
+    assert responses['csat']['score'] == 5
+    assert responses['ces']['score'] == 2
+
+    assert client.post('/api/patient/surveys', json={'kind': 'nps', 'score': 11}).status_code == 400
+    assert client.post('/api/patient/surveys', json={'kind': 'csat', 'score': 0}).status_code == 400
+    assert client.post('/api/patient/surveys', json={'kind': 'unknown', 'score': 5}).status_code == 400
+    assert client.post('/api/patient/surveys', json={'kind': 'nps', 'score': 'девять'}).status_code == 400
+
+    other = make_client()
+    login(other, '+79000000103')
+    assert other.get('/api/patient/surveys').get_json()['responses'] == {}

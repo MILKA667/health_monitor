@@ -587,6 +587,30 @@ def analytics():
         )
         adherence = cur.fetchone()
 
+        cur.execute(
+            """WITH latest AS (
+                 SELECT DISTINCT ON (user_id, kind) user_id, kind, score
+                 FROM survey_responses
+                 WHERE created_at >= now() - make_interval(days => %s)
+                 ORDER BY user_id, kind, created_at DESC
+               )
+               SELECT kind, count(*) AS responses,
+                      avg(score) AS avg_score,
+                      count(*) FILTER (WHERE kind = 'nps' AND score >= 9) AS promoters,
+                      count(*) FILTER (WHERE kind = 'nps' AND score <= 6) AS detractors,
+                      count(*) FILTER (WHERE kind = 'csat' AND score >= 4) AS satisfied
+               FROM latest GROUP BY kind""",
+            (days,),
+        )
+        surveys = {row['kind']: row for row in cur.fetchall()}
+
+    nps = surveys.get('nps')
+    csat = surveys.get('csat')
+    ces = surveys.get('ces')
+    nps_score = None
+    if nps and nps['responses']:
+        nps_score = round((nps['promoters'] - nps['detractors']) / nps['responses'] * 100, 1)
+
     return jsonify({
         'period': {'days': days},
         'users': {
@@ -636,7 +660,18 @@ def analytics():
             'withoutData': without_data,
             'adherence': _rate(adherence['taken'], adherence['expected']),
         },
-        'quality': {'nps': None, 'csat': None, 'ces': None, 'responses': 0},
+        'quality': {
+            'nps': nps_score,
+            'npsResponses': nps['responses'] if nps else 0,
+            'promoters': nps['promoters'] if nps else 0,
+            'detractors': nps['detractors'] if nps else 0,
+            'csat': round(float(csat['avg_score']), 2) if csat and csat['avg_score'] is not None else None,
+            'csatResponses': csat['responses'] if csat else 0,
+            'csatSatisfied': _rate(csat['satisfied'], csat['responses']) if csat else None,
+            'ces': round(float(ces['avg_score']), 2) if ces and ces['avg_score'] is not None else None,
+            'cesResponses': ces['responses'] if ces else 0,
+            'responses': sum(row['responses'] for row in surveys.values()),
+        },
         'monetization': None,
     })
 
