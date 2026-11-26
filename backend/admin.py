@@ -407,6 +407,240 @@ def delete_user(user_id):
     return jsonify({'ok': True})
 
 
+ANALYTICS_PERIODS = (7, 14, 30, 90)
+
+
+def _rate(part, whole):
+    return round(part / whole, 4) if whole else None
+
+
+def _minutes(value):
+    return round(float(value), 1) if value is not None else None
+
+
+@bp.get('/analytics')
+@login_required('admin')
+def analytics():
+    """Дашборд метрик: вовлечённость, воронка, алерты, приверженность."""
+    try:
+        days = int(request.args.get('days', 30))
+    except ValueError:
+        days = 0
+    if days not in ANALYTICS_PERIODS:
+        return error('Период должен быть 7, 14, 30 или 90 дней.')
+
+    with db_cursor() as cur:
+        cur.execute('SELECT role, count(*) AS total FROM users WHERE deleted_at IS NULL GROUP BY role')
+        roles = {row['role']: row['total'] for row in cur.fetchall()}
+
+        cur.execute(
+            """SELECT
+                 count(DISTINCT user_id) FILTER (WHERE created_at >= now() - interval '1 day') AS dau,
+                 count(DISTINCT user_id) FILTER (WHERE created_at >= now() - interval '7 days') AS wau,
+                 count(DISTINCT user_id) FILTER (WHERE created_at >= now() - interval '30 days') AS mau
+               FROM audit_log WHERE user_id IS NOT NULL"""
+        )
+        active = cur.fetchone()
+
+        cur.execute(
+            """WITH days AS (
+                 SELECT generate_series(
+                   date_trunc('day', now() - make_interval(days => %s)),
+                   date_trunc('day', now()),
+                   interval '1 day'
+                 ) AS day
+               )
+               SELECT day::date AS date,
+                 (SELECT count(DISTINCT a.user_id) FROM audit_log a
+                   WHERE a.user_id IS NOT NULL AND a.created_at >= day AND a.created_at < day + interval '1 day') AS active,
+                 (SELECT count(*) FROM users u
+                   WHERE u.deleted_at IS NULL AND u.created_at >= day AND u.created_at < day + interval '1 day') AS "newUsers",
+                 (SELECT count(*) FROM measurements m
+                   WHERE m.measured_at >= day AND m.measured_at < day + interval '1 day') AS measurements
+               FROM days ORDER BY day""",
+            (days,),
+        )
+        daily = [{
+            'date': row['date'].isoformat(),
+            'active': row['active'],
+            'newUsers': row['newUsers'],
+            'measurements': row['measurements'],
+        } for row in cur.fetchall()]
+
+        cur.execute(
+            """WITH cohort AS (
+                 SELECT id, created_at FROM users
+                 WHERE deleted_at IS NULL AND created_at >= now() - make_interval(days => %s)
+               )
+               SELECT
+                 count(*) AS total,
+                 count(*) FILTER (WHERE created_at <= now() - interval '1 day') AS d1_base,
+                 count(*) FILTER (WHERE created_at <= now() - interval '1 day' AND EXISTS (
+                     SELECT 1 FROM audit_log a WHERE a.user_id = cohort.id
+                       AND a.created_at >= cohort.created_at + interval '1 day'
+                       AND a.created_at < cohort.created_at + interval '2 days')) AS d1,
+                 count(*) FILTER (WHERE created_at <= now() - interval '7 days') AS d7_base,
+                 count(*) FILTER (WHERE created_at <= now() - interval '7 days' AND EXISTS (
+                     SELECT 1 FROM audit_log a WHERE a.user_id = cohort.id
+                       AND a.created_at >= cohort.created_at + interval '7 days'
+                       AND a.created_at < cohort.created_at + interval '8 days')) AS d7,
+                 count(*) FILTER (WHERE created_at <= now() - interval '30 days') AS d30_base,
+                 count(*) FILTER (WHERE created_at <= now() - interval '30 days' AND EXISTS (
+                     SELECT 1 FROM audit_log a WHERE a.user_id = cohort.id
+                       AND a.created_at >= cohort.created_at + interval '30 days'
+                       AND a.created_at < cohort.created_at + interval '31 days')) AS d30
+               FROM cohort""",
+            (days,),
+        )
+        retention = cur.fetchone()
+
+        cur.execute(
+            """SELECT count(*) AS active, count(*) FILTER (WHERE days >= 2) AS returning
+               FROM (
+                 SELECT user_id, count(DISTINCT created_at::date) AS days
+                 FROM audit_log WHERE user_id IS NOT NULL AND created_at >= now() - make_interval(days => %s)
+                 GROUP BY user_id
+               ) t""",
+            (days,),
+        )
+        returning = cur.fetchone()
+
+        cur.execute(
+            """WITH apps AS (
+                 SELECT a.id, a.approved_user_id FROM applications a
+                 WHERE a.role = 'patient' AND a.created_at >= now() - make_interval(days => %s)
+               )
+               SELECT count(*) AS submitted,
+                 count(*) FILTER (WHERE approved_user_id IS NOT NULL) AS approved,
+                 count(*) FILTER (WHERE approved_user_id IS NOT NULL AND EXISTS (
+                     SELECT 1 FROM audit_log a WHERE a.user_id = apps.approved_user_id AND a.action = 'login')) AS logged_in,
+                 count(*) FILTER (WHERE approved_user_id IS NOT NULL AND EXISTS (
+                     SELECT 1 FROM measurements m WHERE m.patient_id = apps.approved_user_id)) AS measured
+               FROM apps""",
+            (days,),
+        )
+        funnel = cur.fetchone()
+
+        cur.execute(
+            """SELECT count(*) AS total,
+                 count(*) FILTER (WHERE level = 'crit') AS crit,
+                 count(*) FILTER (WHERE level = 'warn') AS warn,
+                 count(*) FILTER (WHERE level = 'nodata') AS nodata,
+                 count(*) FILTER (WHERE accepted_at IS NOT NULL) AS accepted,
+                 count(*) FILTER (WHERE accepted_at IS NOT NULL AND accepted_at <= created_at + interval '15 minutes') AS within15,
+                 percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (accepted_at - created_at)) / 60.0)
+                   FILTER (WHERE accepted_at IS NOT NULL) AS median_minutes
+               FROM alerts WHERE created_at >= now() - make_interval(days => %s)""",
+            (days,),
+        )
+        alerts = cur.fetchone()
+
+        cur.execute(
+            """WITH days AS (
+                 SELECT generate_series(
+                   date_trunc('day', now() - make_interval(days => %s)),
+                   date_trunc('day', now()),
+                   interval '1 day'
+                 ) AS day
+               )
+               SELECT day::date AS date,
+                 (SELECT count(*) FROM alerts a WHERE a.created_at >= day AND a.created_at < day + interval '1 day') AS created,
+                 (SELECT count(*) FROM alerts a WHERE a.accepted_at >= day AND a.accepted_at < day + interval '1 day') AS accepted
+               FROM days ORDER BY day""",
+            (days,),
+        )
+        alerts_daily = [{
+            'date': row['date'].isoformat(),
+            'created': row['created'],
+            'accepted': row['accepted'],
+        } for row in cur.fetchall()]
+
+        cur.execute(
+            """SELECT count(*) AS total,
+                 count(*) FILTER (WHERE kind = 'glucose') AS glucose,
+                 count(*) FILTER (WHERE kind = 'bp') AS bp,
+                 count(*) FILTER (WHERE kind = 'pef') AS pef,
+                 count(DISTINCT patient_id) AS patients
+               FROM measurements WHERE measured_at >= now() - make_interval(days => %s)""",
+            (days,),
+        )
+        clinical = cur.fetchone()
+
+        cur.execute(
+            """SELECT count(*) AS count FROM users u
+               WHERE u.role = 'patient' AND u.deleted_at IS NULL
+                 AND NOT EXISTS (SELECT 1 FROM measurements m
+                   WHERE m.patient_id = u.id AND m.measured_at >= now() - interval '2 days')"""
+        )
+        without_data = cur.fetchone()['count']
+
+        cur.execute(
+            """SELECT
+                 (SELECT count(*) FROM medication_intakes i
+                    JOIN medication_slots s ON s.id = i.slot_id
+                    WHERE i.taken_on >= current_date - %s AND s.enabled) AS taken,
+                 (SELECT count(*) FROM medication_slots s
+                    JOIN medications m ON m.id = s.medication_id
+                    JOIN users u ON u.id = m.patient_id
+                    WHERE s.enabled AND u.deleted_at IS NULL) * %s AS expected""",
+            (days, days),
+        )
+        adherence = cur.fetchone()
+
+    return jsonify({
+        'period': {'days': days},
+        'users': {
+            'total': sum(roles.values()),
+            'byRole': roles,
+        },
+        'engagement': {
+            'dau': active['dau'],
+            'wau': active['wau'],
+            'mau': active['mau'],
+            'stickiness': _rate(active['dau'], active['mau']),
+            'returning': _rate(returning['returning'], returning['active']),
+            'newUsers': retention['total'],
+            'retention': {
+                'd1': _rate(retention['d1'], retention['d1_base']),
+                'd7': _rate(retention['d7'], retention['d7_base']),
+                'd30': _rate(retention['d30'], retention['d30_base']),
+            },
+            'daily': daily,
+        },
+        'funnel': {
+            'submitted': funnel['submitted'],
+            'approved': funnel['approved'],
+            'loggedIn': funnel['logged_in'],
+            'measured': funnel['measured'],
+            'rates': {
+                'approved': _rate(funnel['approved'], funnel['submitted']),
+                'loggedIn': _rate(funnel['logged_in'], funnel['approved']),
+                'measured': _rate(funnel['measured'], funnel['logged_in']),
+            },
+        },
+        'alerts': {
+            'total': alerts['total'],
+            'crit': alerts['crit'],
+            'warn': alerts['warn'],
+            'nodata': alerts['nodata'],
+            'accepted': alerts['accepted'],
+            'acceptanceRate': _rate(alerts['accepted'], alerts['total']),
+            'within15Rate': _rate(alerts['within15'], alerts['total']),
+            'medianMinutes': _minutes(alerts['median_minutes']),
+            'daily': alerts_daily,
+        },
+        'clinical': {
+            'measurements': clinical['total'],
+            'byKind': {'glucose': clinical['glucose'], 'bp': clinical['bp'], 'pef': clinical['pef']},
+            'activePatients': clinical['patients'],
+            'withoutData': without_data,
+            'adherence': _rate(adherence['taken'], adherence['expected']),
+        },
+        'quality': {'nps': None, 'csat': None, 'ces': None, 'responses': 0},
+        'monetization': None,
+    })
+
+
 @bp.get('/audit')
 @login_required('admin')
 def audit_log():
