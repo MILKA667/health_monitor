@@ -17,6 +17,7 @@ import FormError from '../../components/FormError'
 import TextTabs from '../../components/TextTabs'
 import { formatDayTime, formatDate } from '../../utils/format'
 import { ROLE_HOME } from '../../utils/roles'
+import Analytics from './Analytics'
 import '../../components/Field/style.css'
 import './style.css'
 
@@ -196,6 +197,7 @@ function Admin() {
     { id: 'applications', label: pending ? `Заявки · ${pending}` : 'Заявки' },
     { id: 'users', label: 'Пользователи' },
     { id: 'audit', label: 'Журнал аудита' },
+    { id: 'analytics', label: 'Аналитика' },
   ]
 
   return (
@@ -458,6 +460,8 @@ function Admin() {
             </section>
           </>
         )}
+
+        {tab === 'analytics' && <Analytics />}
 
         {tab === 'audit' && (
           <>

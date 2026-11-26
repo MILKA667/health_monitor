@@ -220,6 +220,29 @@ def test_delete_user(client, make_client, demo):
         assert cur.fetchone()['n'] == 1
 
 
+def test_analytics_dashboard(client, demo):
+    assert client.get('/api/admin/analytics').status_code == 401
+    login(client, 'doctor@demo.ru')
+    assert client.get('/api/admin/analytics').status_code == 403
+
+    login(client, 'admin@demo.ru')
+    data = client.get('/api/admin/analytics?days=30').get_json()
+
+    assert data['period']['days'] == 30
+    assert data['users']['total'] >= 10
+    assert data['users']['byRole']['doctor'] == 1
+    assert data['engagement']['mau'] >= 1
+    assert len(data['engagement']['daily']) == 31
+    assert data['clinical']['measurements'] > 0
+    assert data['clinical']['byKind']['glucose'] > 0
+    assert data['alerts']['total'] > 0
+    assert data['alerts']['acceptanceRate'] is not None
+    assert data['quality']['nps'] is None
+    assert data['monetization'] is None
+
+    assert client.get('/api/admin/analytics?days=5').status_code == 400
+
+
 def test_deleted_account_cannot_be_reapproved(client, demo):
     login(client, 'admin@demo.ru')
     app_id = applications(client)['relative']['id']

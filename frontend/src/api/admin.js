@@ -40,3 +40,8 @@ export function deleteUser(userId) {
 export function getAudit(type = 'all') {
   return request(`/admin/audit?type=${type}`)
 }
+
+// Метрики продукта за период (7, 14, 30 или 90 дней)
+export function getAnalytics(days = 30) {
+  return request(`/admin/analytics?days=${days}`)
+}

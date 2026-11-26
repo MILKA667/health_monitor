@@ -14,6 +14,7 @@ vi.mock('../../api/admin', () => ({
   resetUserPassword: vi.fn(),
   deleteUser: vi.fn(),
   getAudit: vi.fn(),
+  getAnalytics: vi.fn(),
 }))
 vi.mock('../../api/auth', () => ({ getMe: vi.fn(), logout: vi.fn() }))
 const api = await import('../../api/admin')
@@ -63,6 +64,37 @@ const AUDIT = {
     { id: 1, createdAt: '2026-11-25T10:00:00+03:00', who: 'Система', action: 'Неудачная попытка входа',
       object: null, ip: '10.0.0.1', security: true },
   ],
+}
+
+const ANALYTICS = {
+  period: { days: 30 },
+  users: { total: 11, byRole: { doctor: 1, patient: 9, relative: 1 } },
+  engagement: {
+    dau: 4, wau: 9, mau: 11, stickiness: 0.36, returning: 0.72, newUsers: 2,
+    retention: { d1: 0.5, d7: 0.3, d30: null },
+    daily: [
+      { date: '2026-11-01', active: 3, newUsers: 1, measurements: 5 },
+      { date: '2026-11-02', active: 5, newUsers: 1, measurements: 7 },
+    ],
+  },
+  funnel: {
+    submitted: 10, approved: 6, loggedIn: 4, measured: 3,
+    rates: { approved: 0.6, loggedIn: 0.67, measured: 0.75 },
+  },
+  alerts: {
+    total: 12, crit: 3, warn: 8, nodata: 1, accepted: 9, acceptanceRate: 0.75,
+    within15Rate: 0.42, medianMinutes: 7.5,
+    daily: [
+      { date: '2026-11-01', created: 2, accepted: 1 },
+      { date: '2026-11-02', created: 1, accepted: 2 },
+    ],
+  },
+  clinical: {
+    measurements: 40, byKind: { glucose: 20, bp: 15, pef: 5 },
+    activePatients: 9, withoutData: 1, adherence: 0.8,
+  },
+  quality: { nps: null, csat: null, ces: null, responses: 0 },
+  monetization: null,
 }
 
 function renderAdmin() {
@@ -146,6 +178,20 @@ describe('Admin', () => {
     expect(api.resetUserPassword).toHaveBeenCalledWith(4)
     expect(await screen.findByRole('status')).toHaveTextContent('Abc1234567')
     expect(screen.getByText(/Показывается один раз/)).toBeInTheDocument()
+  })
+
+  it('показывает дашборд метрик и меняет период', async () => {
+    api.getAnalytics.mockResolvedValue(ANALYTICS)
+    renderAdmin()
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'Аналитика' }))
+    expect(await screen.findByText('Вовлечённость')).toBeInTheDocument()
+    expect(screen.getByText('DAU')).toBeInTheDocument()
+    expect(screen.getByText('Приверженность')).toBeInTheDocument()
+    expect(api.getAnalytics).toHaveBeenCalledWith(30)
+
+    await userEvent.click(screen.getByRole('button', { name: '7 дней' }))
+    expect(api.getAnalytics).toHaveBeenLastCalledWith(7)
   })
 
   it('удаляет аккаунт только после подтверждения', async () => {
