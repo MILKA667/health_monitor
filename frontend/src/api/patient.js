@@ -95,3 +95,8 @@ export function getSurveys() {
 export function submitSurvey(data) {
   return request('/patient/surveys', { method: 'POST', body: data })
 }
+
+// Подписание согласия из профиля: kind — personal_data или relative_sms
+export function signConsent(kind) {
+  return request('/patient/consents', { method: 'POST', body: { kind } })
+}

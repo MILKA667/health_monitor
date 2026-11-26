@@ -250,6 +250,32 @@ def test_profile_toggles(client, demo):
         assert cur.fetchone()['n'] == 2
 
 
+def test_consent_signing(client, demo):
+    login(client, '+79000000102')
+    with db_cursor() as cur:
+        cur.execute("SELECT id FROM users WHERE phone = '79000000102'")
+        user_id = cur.fetchone()['id']
+        cur.execute('DELETE FROM consents WHERE user_id = %s', (user_id,))
+
+    profile = client.get('/api/patient/profile').get_json()
+    assert profile['consents']['personalData'] is None
+    assert profile['consents']['relativeAccess'] is None
+
+    response = client.post('/api/patient/consents', json={'kind': 'personal_data'})
+    assert response.status_code == 200
+    assert response.get_json()['consents']['personalData'] is not None
+    assert response.get_json()['consents']['relativeAccess'] is None
+
+    response = client.post('/api/patient/consents', json={'kind': 'relative_sms'})
+    assert response.status_code == 200
+    assert response.get_json()['consents']['relativeAccess'] is not None
+
+    assert client.post('/api/patient/consents', json={'kind': 'unknown'}).status_code == 400
+    with db_cursor() as cur:
+        cur.execute("SELECT count(*) AS n FROM audit_log WHERE action = 'consent_signed'")
+        assert cur.fetchone()['n'] == 2
+
+
 def test_devices(client, demo):
     login(client, '+79000000102')
     device = client.get('/api/patient/devices').get_json()['devices'][0]

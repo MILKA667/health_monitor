@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { getProfile, getSurveys, submitSurvey, updateProfile } from '../../api/patient'
+import { getProfile, getSurveys, signConsent, submitSurvey, updateProfile } from '../../api/patient'
 import { logout } from '../../api/auth'
+import Button from '../../components/Button'
 import FormError from '../../components/FormError'
 import { formatDate } from '../../utils/format'
 import './style.css'
@@ -31,13 +32,8 @@ function relation(name) {
   return name.split(',').pop().trim()
 }
 
-function devicesText(devices) {
-  if (devices.length === 0) return 'не подключены'
-  return devices.map((device) => `${device.name.toLowerCase()} ${device.connected ? 'подключён' : 'отключён'}`).join(', ')
-}
-
-// Один вопрос опроса: шкала оценок и сохранённый ответ
-function SurveyQuestion({ survey, saved, saving, onSave }) {
+// Один вопрос опроса: шкала оценок. После ответа вопрос исчезает из списка.
+function SurveyQuestion({ survey, pending, onSave }) {
   return (
     <div className="survey">
       <div className="survey__head">
@@ -49,25 +45,54 @@ function SurveyQuestion({ survey, saved, saving, onSave }) {
           <button
             key={score}
             type="button"
-            className={`survey__score${saved?.score === score ? ' survey__score--active' : ''}`}
-            aria-pressed={saved?.score === score}
-            disabled={saving}
+            className="survey__score"
+            disabled={pending}
             onClick={() => onSave(survey.kind, score)}
           >
             {score}
           </button>
         ))}
       </div>
-      {saved && (
-        <span className="survey__saved">
-          Ваша оценка: {saved.score} · {formatDate(saved.createdAt)}
-        </span>
-      )}
     </div>
   )
 }
 
-// Профиль пациента: врач, близкий, устройства, напоминания, согласия и безопасность
+// Заглушка документа согласия: текст появится позже
+function ConsentModal({ consent, pending, error, onSign, onClose }) {
+  useEffect(() => {
+    function handleKey(event) {
+      if (event.key === 'Escape' && !pending) onClose()
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [pending, onClose])
+
+  return (
+    <div
+      className="consent-modal"
+      role="presentation"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !pending) onClose()
+      }}
+    >
+      <div className="consent-modal__card" role="dialog" aria-modal="true" aria-labelledby="consent-title">
+        <h2 id="consent-title" className="consent-modal__title">{consent.label}</h2>
+        <p className="consent-modal__placeholder">
+          Здесь будет текст согласия. Документ появится позже.
+        </p>
+        <FormError>{error}</FormError>
+        <div className="consent-modal__actions">
+          <Button variant="primary" onClick={onSign} disabled={pending}>
+            {pending ? 'Подписываем…' : consent.signed ? 'Подписать заново' : 'Подписать'}
+          </Button>
+          <Button onClick={onClose} disabled={pending}>Закрыть</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Профиль пациента: врач, близкий, уведомления, согласия и безопасность
 function PatientProfile() {
   const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
@@ -75,6 +100,9 @@ function PatientProfile() {
   const [surveys, setSurveys] = useState({})
   const [surveyError, setSurveyError] = useState('')
   const [savingSurvey, setSavingSurvey] = useState('')
+  const [consent, setConsent] = useState(null)
+  const [consentError, setConsentError] = useState('')
+  const [savingConsent, setSavingConsent] = useState(false)
 
   useEffect(() => {
     getProfile()
@@ -111,12 +139,31 @@ function PatientProfile() {
     setSurveyError('')
     setSavingSurvey(kind)
     try {
-      const result = await submitSurvey({ kind, score })
-      setSurveys((current) => ({ ...current, [kind]: { score, createdAt: result.createdAt } }))
+      await submitSurvey({ kind, score })
+      setSurveys((current) => ({ ...current, [kind]: { score } }))
     } catch (err) {
       setSurveyError(err.message)
     } finally {
       setSavingSurvey('')
+    }
+  }
+
+  function openConsent(kind, label, signed) {
+    setConsent({ kind, label, signed })
+    setConsentError('')
+  }
+
+  async function signSelectedConsent() {
+    if (!consent) return
+    setSavingConsent(true)
+    setConsentError('')
+    try {
+      setProfile(await signConsent(consent.kind))
+      setConsent(null)
+    } catch (err) {
+      setConsentError(err.message)
+    } finally {
+      setSavingConsent(false)
     }
   }
 
@@ -127,6 +174,8 @@ function PatientProfile() {
       </div>
     )
   }
+
+  const pendingSurveys = SURVEYS.filter((survey) => !surveys[survey.kind])
 
   return (
     <div className="patient-page profile">
@@ -175,41 +224,6 @@ function PatientProfile() {
         )}
       </section>
 
-      <section className="profile__section" aria-labelledby="profile-devices">
-        <h2 id="profile-devices">Устройства</h2>
-        <div className="profile__row">
-          <span>{devicesText(profile.devices)}</span>
-          <Link to="/patient/devices">Управлять</Link>
-        </div>
-      </section>
-
-      <section className="profile__section" aria-labelledby="profile-channels">
-        <h2 id="profile-channels">Уведомления приходят</h2>
-        <label className="profile__item">
-          <span className="profile__text">Push-уведомлением</span>
-          <input
-            type="checkbox"
-            className="profile__check"
-            checked={profile.channels.push}
-            aria-label="Push-уведомлением"
-            onChange={(e) => save({ push: e.target.checked })}
-          />
-        </label>
-        <label className="profile__item">
-          <span className="profile__text">Telegram</span>
-          <input
-            type="checkbox"
-            className="profile__check"
-            checked={profile.channels.sms}
-            aria-label="Telegram"
-            onChange={(e) => save({ sms: e.target.checked })}
-          />
-        </label>
-        {!profile.channels.push && !profile.channels.sms && (
-          <p className="profile__channel-error" role="alert">Выберите хотя бы один способ, иначе напоминания не придут.</p>
-        )}
-      </section>
-
       <section className="profile__section" aria-labelledby="profile-telegram">
         <h2 id="profile-telegram">Уведомления в Telegram</h2>
         <div className="profile__row">
@@ -223,31 +237,54 @@ function PatientProfile() {
         <h2 id="profile-consents">Согласия</h2>
         <div className="profile__row">
           <span>Обработка данных о здоровье</span>
-          <span>{profile.consents.personalData ? `подписано ${formatDate(profile.consents.personalData)}` : 'не подписано'}</span>
+          <span className="profile__consent">
+            <span>{profile.consents.personalData ? `подписано ${formatDate(profile.consents.personalData)}` : 'не подписано'}</span>
+            <button
+              type="button"
+              className="profile__link"
+              aria-label={`${profile.consents.personalData ? 'Открыть' : 'Подписать'} согласие «Обработка данных о здоровье»`}
+              onClick={() => openConsent('personal_data', 'Обработка данных о здоровье', Boolean(profile.consents.personalData))}
+            >
+              {profile.consents.personalData ? 'Открыть' : 'Подписать'}
+            </button>
+          </span>
         </div>
-        <div className="profile__row">
-          <span>Доступ родственника</span>
-          <span>{profile.consents.relativeAccess ? `подписано ${formatDate(profile.consents.relativeAccess)}` : 'не подписано'}</span>
-        </div>
+        {profile.relative && (
+          <div className="profile__row">
+            <span>Доступ родственника</span>
+            <span className="profile__consent">
+              <span>{profile.consents.relativeAccess ? `подписано ${formatDate(profile.consents.relativeAccess)}` : 'не подписано'}</span>
+              <button
+                type="button"
+                className="profile__link"
+                aria-label={`${profile.consents.relativeAccess ? 'Открыть' : 'Подписать'} согласие «Доступ родственника»`}
+                onClick={() => openConsent('relative_sms', 'Доступ родственника', Boolean(profile.consents.relativeAccess))}
+              >
+                {profile.consents.relativeAccess ? 'Открыть' : 'Подписать'}
+              </button>
+            </span>
+          </div>
+        )}
         <p className="patient-hint">
           Отзыв согласия на обработку данных прекращает наблюдение. Для отзыва обратитесь к врачу или в клинику.
         </p>
       </section>
 
-      <section className="profile__section" aria-labelledby="profile-surveys">
-        <h2 id="profile-surveys">Оценка сервиса</h2>
-        <p className="patient-hint">Ответы помогают улучшать сервис. Оценку можно изменить в любой момент.</p>
-        {surveyError && <p className="profile__channel-error" role="alert">{surveyError}</p>}
-        {SURVEYS.map((survey) => (
-          <SurveyQuestion
-            key={survey.kind}
-            survey={survey}
-            saved={surveys[survey.kind]}
-            saving={savingSurvey === survey.kind}
-            onSave={saveSurvey}
-          />
-        ))}
-      </section>
+      {pendingSurveys.length > 0 && (
+        <section className="profile__section" aria-labelledby="profile-surveys">
+          <h2 id="profile-surveys">Оценка сервиса</h2>
+          <p className="patient-hint">Ответы помогают улучшать сервис. После ответа вопрос исчезает.</p>
+          <FormError>{surveyError}</FormError>
+          {pendingSurveys.map((survey) => (
+            <SurveyQuestion
+              key={survey.kind}
+              survey={survey}
+              pending={savingSurvey === survey.kind}
+              onSave={saveSurvey}
+            />
+          ))}
+        </section>
+      )}
 
       <section className="profile__section" aria-labelledby="profile-security">
         <h2 id="profile-security">Безопасность</h2>
@@ -258,6 +295,16 @@ function PatientProfile() {
       </section>
 
       <button type="button" className="profile__logout" onClick={handleLogout}>Выйти из аккаунта</button>
+
+      {consent && (
+        <ConsentModal
+          consent={consent}
+          pending={savingConsent}
+          error={consentError}
+          onSign={signSelectedConsent}
+          onClose={() => { if (!savingConsent) setConsent(null) }}
+        />
+      )}
     </div>
   )
 }
